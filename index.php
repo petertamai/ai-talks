@@ -10,6 +10,7 @@ require_once 'includes/config.php';
     <title>AI Conversation System - by Piotr Tamulewicz</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         :root {
             --bg-color: #4D4D4D;
@@ -50,6 +51,21 @@ require_once 'includes/config.php';
             flex: 1;
             overflow-y: auto;
             min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 300px);
+            scrollbar-width: thin;
+            scrollbar-color: var(--btn-bg) var(--bg-color);
+        }
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chat-container::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: var(--btn-bg);
+            border-radius: 20px;
         }
         .chat-message {
             border-radius: 0.5rem;
@@ -57,6 +73,7 @@ require_once 'includes/config.php';
             margin-bottom: 0.5rem;
             max-width: 85%;
             position: relative;
+            word-break: break-word;
         }
         .chat-message.ai1 {
             background-color: var(--accent-1);
@@ -108,6 +125,74 @@ require_once 'includes/config.php';
         .settings-panel {
             display: none;
         }
+        .settings-panel.open {
+            display: block;
+        }
+        /* Typing indicator */
+        .typing-indicator {
+            background-color: rgba(255, 255, 255, 0.2);
+            will-change: transform;
+            width: auto;
+            border-radius: 50px;
+            padding: 10px;
+            display: inline-flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            float: left;
+            margin: 0 1px;
+            background-color: #fff;
+            display: block;
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        .typing-indicator span:nth-of-type(1) {
+            animation: 1s blink infinite .3333s;
+        }
+        .typing-indicator span:nth-of-type(2) {
+            animation: 1s blink infinite .6666s;
+        }
+        .typing-indicator span:nth-of-type(3) {
+            animation: 1s blink infinite .9999s;
+        }
+        @keyframes blink {
+            50% {
+                opacity: 1;
+            }
+        }
+        .typing-indicator-container {
+            display: none;
+        }
+        /* Select2 overrides */
+        .select2-container {
+            width: 100% !important;
+        }
+        .select2-container--default .select2-selection--single {
+            background-color: #1F2937 !important;
+            border: 1px solid #374151 !important;
+            border-radius: 0.375rem !important;
+            height: 38px !important;
+            color: white !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: white !important;
+            line-height: 38px !important;
+        }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: var(--btn-bg) !important;
+        }
+        .select2-dropdown {
+            background-color: #1F2937 !important;
+            border: 1px solid #374151 !important;
+            color: white !important;
+        }
+        .select2-results__option {
+            padding: 8px !important;
+        }
         /* Mobile optimizations */
         @media (max-width: 768px) {
             .chat-message {
@@ -125,8 +210,13 @@ require_once 'includes/config.php';
             }
             .chat-container {
                 min-height: 300px;
+                max-height: 50vh;
             }
         }
+        .select2-container--classic .select2-search--dropdown .select2-search__field {
+            color: #000000;
+        }
+
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -194,7 +284,7 @@ require_once 'includes/config.php';
                     
                     <div class="mb-3">
                         <label class="block text-sm font-medium mb-1">Model</label>
-                        <select id="ai1-model" class="w-full p-2 bg-gray-800 rounded form-control">
+                        <select id="ai1-model" class="model-select w-full p-2 bg-gray-800 rounded form-control">
                             <option value="">Loading models...</option>
                         </select>
                     </div>
@@ -236,7 +326,7 @@ require_once 'includes/config.php';
                     
                     <div class="mb-3">
                         <label class="block text-sm font-medium mb-1">Model</label>
-                        <select id="ai2-model" class="w-full p-2 bg-gray-800 rounded form-control">
+                        <select id="ai2-model" class="model-select w-full p-2 bg-gray-800 rounded form-control">
                             <option value="">Loading models...</option>
                         </select>
                     </div>
@@ -318,6 +408,21 @@ require_once 'includes/config.php';
                     <div id="chat-container" class="chat-container bg-gray-800 rounded-lg p-3 overflow-y-auto flex flex-col">
                         <!-- Chat messages will be inserted here -->
                     </div>
+                    <!-- Typing indicators -->
+                    <div id="ai1-typing" class="typing-indicator-container">
+                        <div class="typing-indicator ai1">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                    <div id="ai2-typing" class="typing-indicator-container">
+                        <div class="typing-indicator ai2">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -335,6 +440,11 @@ require_once 'includes/config.php';
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/conversation.js"></script>
     <script src="assets/js/app.js"></script>
 </body>
 </html>
