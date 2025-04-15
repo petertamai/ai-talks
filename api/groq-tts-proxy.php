@@ -22,6 +22,28 @@ function logTts($message) {
     error_log("$log_prefix $message");
 }
 
+if (isset($data['conversation_id']) && !empty($data['conversation_id'])) {
+    $conversationId = preg_replace('/[^a-zA-Z0-9_]/', '', $data['conversation_id']);
+    $messageIndex = isset($data['message_index']) ? intval($data['message_index']) : 0;
+    $agent = isset($data['agent']) ? $data['agent'] : (strpos($data['voice'], 'Angelo') !== false ? 'ai2' : 'ai1');
+    
+    // Create directories if they don't exist
+    $conversationDir = "../conversations/{$conversationId}";
+    $audioDir = "{$conversationDir}/audio";
+    
+    if (!file_exists($conversationDir)) {
+        mkdir($conversationDir, 0755, true);
+    }
+    
+    if (!file_exists($audioDir)) {
+        mkdir($audioDir, 0755, true);
+    }
+    
+    // Save a copy of the audio file for sharing
+    $sharedAudioPath = "{$audioDir}/message_{$messageIndex}.mp3";
+    copy($audioFilePath, $sharedAudioPath);
+}
+
 // Check if request method is POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

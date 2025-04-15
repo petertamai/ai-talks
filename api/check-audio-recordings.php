@@ -7,24 +7,15 @@
  * @author Piotr Tamulewicz <pt@petertam.pro>
  */
 
-// Include the required configuration files
+// Include required configuration
 require_once '../includes/config.php';
-require_once '../includes/functions.php';
 
 // Set headers
 header('Content-Type: application/json');
 
-// Define error handling function
-function handleError($message, $errorDetails = null) {
-    error_log("Check Audio Recordings Error: $message " . ($errorDetails ? json_encode($errorDetails) : ''));
-    
-    // Trigger custom error action for logging
-    do_action('ai_conversation_system_error', [
-        'component' => 'check_audio_recordings',
-        'message' => $message,
-        'details' => $errorDetails
-    ]);
-    
+// Helper function for error handling
+function send_error($message, $error_details = null) {
+    error_log("Check Audio Recordings Error: $message " . ($error_details ? json_encode($error_details) : ''));
     echo json_encode([
         'success' => false,
         'message' => $message,
@@ -35,26 +26,31 @@ function handleError($message, $errorDetails = null) {
 
 // Check if the request is a GET request
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    handleError('Invalid request method. Only GET requests are allowed.');
+    send_error('Invalid request method. Only GET requests are allowed.');
 }
 
 // Validate input
 if (!isset($_GET['conversation_id']) || empty($_GET['conversation_id'])) {
-    handleError('Missing conversation ID');
+    send_error('Missing conversation ID');
 }
 
 try {
-    $conversationId = sanitize_text_field($_GET['conversation_id']);
+    $conversationId = preg_replace('/[^a-zA-Z0-9_]/', '', $_GET['conversation_id']);
+    
+    // Make sure conversation ID is safe
+    if ($conversationId !== $_GET['conversation_id']) {
+        send_error("Invalid conversation ID format: {$_GET['conversation_id']}");
+    }
     
     // Path to audio directory
-    $audioPath = ABSPATH . '/conversations/' . $conversationId . '/audio';
+    $audioPath = "../conversations/$conversationId/audio";
     
     // Check if the audio directory exists
     $hasAudio = false;
     
     if (file_exists($audioPath)) {
         // Check if there are any audio files
-        $audioFiles = glob($audioPath . '/*.mp3');
+        $audioFiles = glob("$audioPath/*.mp3");
         $hasAudio = !empty($audioFiles);
     }
     
@@ -65,5 +61,5 @@ try {
     ]);
     
 } catch (Exception $e) {
-    handleError('An error occurred while checking for audio recordings', $e->getMessage());
+    send_error('An error occurred while checking for audio recordings', $e->getMessage());
 }

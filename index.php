@@ -1,4 +1,5 @@
 <?php
+//index.php
 // Include configuration
 require_once 'includes/config.php';
 ?>
@@ -506,6 +507,7 @@ require_once 'includes/config.php';
     <script src="assets/js/api.js"></script>
     <script src="assets/js/conversation.js"></script>
     <script src="assets/js/app.js"></script>
+    <script src="assets/js/conversation-share.js"></script>
     <script>
 // Fix for settings panel opening/closing
 document.addEventListener('DOMContentLoaded', function() {

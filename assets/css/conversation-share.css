@@ -1,0 +1,177 @@
+/**
+ * Conversation Share and Play Styles
+ * 
+ * CSS styles for the conversation sharing and audio playback feature.
+ * 
+ * @author Piotr Tamulewicz <pt@petertam.pro>
+ */
+
+/* Conversation container */
+.conversation-container {
+    position: relative;
+    padding: 1.5rem;
+    background-color: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 2rem;
+}
+
+/* Conversation header */
+.conversation-header {
+    display: flex;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eaeaea;
+    margin-bottom: 1.5rem;
+}
+
+/* Conversation action buttons container */
+.conversation-action-buttons {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: 0.5rem;
+}
+
+/* Share button */
+.btn-share {
+    background-color: #397BFB;
+    color: #fff;
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-share:hover {
+    background-color: #2b6de5;
+}
+
+/* Play button */
+.btn-play {
+    background-color: #cecaba;
+    color: #333;
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-play:hover {
+    background-color: #b3b1a3;
+}
+
+/* Messages container */
+.conversation-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Message styles */
+.message {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    transition: box-shadow 0.3s ease;
+}
+
+.message-human {
+    background-color: #f0f0f0;
+    margin-right: 2rem;
+    align-self: flex-start;
+}
+
+.message-ai {
+    background-color: #f8f9ff;
+    margin-left: 2rem;
+    align-self: flex-end;
+    border-left: 3px solid #397BFB;
+}
+
+.message-header {
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+}
+
+.message-header .text-muted {
+    margin-left: 0.5rem;
+}
+
+.message-content {
+    white-space: pre-wrap;
+}
+
+/* Highlighted message (currently playing) */
+.message.highlighted {
+    box-shadow: 0 0 0 2px #397BFB;
+}
+
+/* Shared conversation page sidebar */
+.sidebar .card {
+    position: sticky;
+    top: 1rem;
+}
+
+.prompt-content {
+    max-height: 100px;
+    overflow: hidden;
+}
+
+.full-prompt {
+    white-space: pre-wrap;
+}
+
+/* SweetAlert customizations */
+.swal2-popup .share-link-container {
+    display: flex;
+    margin: 1rem 0;
+}
+
+.swal2-popup #share-link-input {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 0.25rem 0 0 0.25rem;
+}
+
+.swal2-popup #copy-link-btn {
+    background: #397BFB;
+    color: white;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+    cursor: pointer;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .col-md-3.sidebar {
+        margin-bottom: 1.5rem;
+    }
+    
+    .message-human,
+    .message-ai {
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    .conversation-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .conversation-action-buttons {
+        margin-left: 0;
+        margin-top: 1rem;
+    }
+}
