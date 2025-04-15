@@ -201,152 +201,177 @@ class SpeechHandler {
             callback(''); // Call callback with empty string on error
         }
     }
-    
-    /**
-     * Speak text using Groq's Text-to-Speech API
-     * @param {string} aiId - The ID of the AI agent that's speaking
-     * @param {string} text - The text to speak
-     * @param {string} voice - The voice to use
-     * @param {function} callback - Function to call when speech is finished
-     */
-    async speakText(aiId, text, voice, callback) {
-        try {
-            console.log(`Speaking with ${aiId}, voice: ${voice}, text: "${text.substring(0, 50)}..."`);
+
+/**
+ * Speak text using Groq's Text-to-Speech API
+ * @param {string} aiId - The ID of the AI agent that's speaking
+ * @param {string} text - The text to speak
+ * @param {string} voice - The voice to use
+ * @param {function} callback - Function to call when speech is finished
+ */
+async speakText(aiId, text, voice, callback) {
+    try {
+        console.log(`Speaking with ${aiId}, voice: ${voice}, text: "${text.substring(0, 50)}..."`);
+        
+        // Update UI to show speaking state
+        this.updateSpeakingState(aiId, true);
+        
+        // Verify parameters
+        if (!voice || voice.trim() === '') {
+            throw new Error('Voice parameter is empty');
+        }
+        
+        if (!text || text.trim() === '') {
+            throw new Error('Text parameter is empty');
+        }
+        
+        // Get the conversation ID from localStorage (used for sharing)
+        const conversationId = localStorage.getItem('currentConversationId') || 
+            ('conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+        
+        // If no conversation ID exists, create and store one
+        if (!localStorage.getItem('currentConversationId')) {
+            localStorage.setItem('currentConversationId', conversationId);
+        }
+        
+        console.log(`Using conversation ID: ${conversationId}`);
+        
+        // Get the current message index (count of all messages)
+        const messageIndex = document.querySelectorAll('.chat-message').length - 1;
+        
+        console.log(`TTS for conversation: ${conversationId}, message: ${messageIndex}, agent: ${aiId}`);
+        
+        // Debug the exact payload we're sending
+        const payload = {
+            voice: voice,
+            input: text,
+            conversation_id: conversationId,
+            message_index: messageIndex,
+            agent: aiId
+        };
+        
+        console.log('TTS API payload:', payload);
+        console.log('JSON payload:', JSON.stringify(payload));
+        
+        // Send request to our PHP proxy
+        console.log('Sending request to TTS proxy...');
+        const response = await fetch('api/groq-tts-proxy.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log('TTS response status:', response.status);
+        console.log('TTS response type:', response.headers.get('Content-Type'));
+        
+        if (!response.ok) {
+            try {
+                const errorData = await response.json();
+                throw new Error(`Server error: ${errorData.error || response.status}`);
+            } catch (e) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+        }
+        
+        // Get response content type
+        const contentType = response.headers.get('Content-Type');
+        console.log('TTS response content type:', contentType);
+        
+        // Check if response is audio
+        if (contentType && contentType.includes('audio/')) {
+            // Get audio blob from response
+            const audioBlob = await response.blob();
+            console.log(`Audio blob received: ${audioBlob.size} bytes`);
             
-            // Update UI to show speaking state
-            this.updateSpeakingState(aiId, true);
+            // Create object URL for audio blob
+            const audioUrl = URL.createObjectURL(audioBlob);
+            console.log('Audio URL created:', audioUrl);
             
-            // Verify parameters
-            if (!voice || voice.trim() === '') {
-                throw new Error('Voice parameter is empty');
+            // Verify audio element exists
+            if (!this.audioElements[aiId]) {
+                throw new Error(`Audio element for ${aiId} not found`);
             }
             
-            if (!text || text.trim() === '') {
-                throw new Error('Text parameter is empty');
-            }
+            // Set audio source and play
+            const audioElement = this.audioElements[aiId];
+            audioElement.src = audioUrl;
             
-            // Debug the exact payload we're sending
-            const payload = {
-                voice: voice,
-                input: text
-            };
-            
-            console.log('TTS API payload:', payload);
-            console.log('JSON payload:', JSON.stringify(payload));
-            
-            // Send request to our PHP proxy
-            console.log('Sending request to TTS proxy...');
-            const response = await fetch('api/groq-tts-proxy.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
+            // Debug log the audio element state
+            console.log('Audio element details:', {
+                id: aiId,
+                src: audioElement.src,
+                paused: audioElement.paused,
+                duration: audioElement.duration,
+                readyState: audioElement.readyState
             });
             
-            console.log('TTS response status:', response.status);
-            console.log('TTS response type:', response.headers.get('Content-Type'));
-            
-            if (!response.ok) {
-                try {
-                    const errorData = await response.json();
-                    throw new Error(`Server error: ${errorData.error || response.status}`);
-                } catch (e) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
-            }
-            
-            // Get response content type
-            const contentType = response.headers.get('Content-Type');
-            console.log('TTS response content type:', contentType);
-            
-            // Check if response is audio
-            if (contentType && contentType.includes('audio/')) {
-                // Get audio blob from response
-                const audioBlob = await response.blob();
-                console.log(`Audio blob received: ${audioBlob.size} bytes`);
-                
-                // Create object URL for audio blob
-                const audioUrl = URL.createObjectURL(audioBlob);
-                console.log('Audio URL created:', audioUrl);
-                
-                // Verify audio element exists
-                if (!this.audioElements[aiId]) {
-                    throw new Error(`Audio element for ${aiId} not found`);
-                }
-                
-                // Set audio source and play
-                const audioElement = this.audioElements[aiId];
-                audioElement.src = audioUrl;
-                
-                // Debug log the audio element state
-                console.log('Audio element details:', {
-                    id: aiId,
-                    src: audioElement.src,
-                    paused: audioElement.paused,
-                    duration: audioElement.duration,
-                    readyState: audioElement.readyState
+            // Add event listeners
+            audioElement.oncanplay = () => {
+                console.log(`Audio for ${aiId} is ready to play`);
+                audioElement.play().catch(e => {
+                    console.error('Error playing audio:', e);
                 });
+            };
+            
+            audioElement.onended = () => {
+                console.log(`Audio for ${aiId} finished playing`);
                 
-                // Add event listeners
-                audioElement.oncanplay = () => {
-                    console.log(`Audio for ${aiId} is ready to play`);
-                    audioElement.play().catch(e => {
-                        console.error('Error playing audio:', e);
-                    });
-                };
+                // Update UI to show not speaking state
+                this.updateSpeakingState(aiId, false);
                 
-                audioElement.onended = () => {
-                    console.log(`Audio for ${aiId} finished playing`);
-                    
-                    // Update UI to show not speaking state
-                    this.updateSpeakingState(aiId, false);
-                    
-                    // Call callback when speech is finished
-                    callback();
-                    
-                    // Revoke object URL to free memory
-                    URL.revokeObjectURL(audioUrl);
-                };
-                
-                audioElement.onerror = (e) => {
-                    console.error(`Audio error for ${aiId}:`, e);
-                    this.updateSpeakingState(aiId, false);
-                    callback();
-                };
-                
-                // Try to play audio
-                try {
-                    audioElement.load(); // Force reload
-                    console.log(`Attempting to play audio for ${aiId}`);
-                } catch (e) {
-                    console.error('Error loading audio:', e);
-                    this.updateSpeakingState(aiId, false);
-                    callback();
+                // Show the play button in conversation header if audio exists
+                if (window.conversationShare) {
+                    window.conversationShare.showShareButton(true);
+                    window.conversationShare.showPlayButton(true);
+                    window.conversationShare.updatePlayButtonVisibility();
                 }
-            } else {
-                // If not audio, it's likely an error - try to parse as JSON
-                console.warn('Response is not audio, trying to parse as JSON');
-                try {
-                    const errorData = await response.json();
-                    throw new Error(`TTS API error: ${errorData.error || 'Unknown error'}`);
-                } catch (e) {
-                    const responseText = await response.text();
-                    throw new Error(`TTS API returned non-audio response: ${responseText.substring(0, 100)}`);
-                }
+                
+                // Call callback when speech is finished
+                callback();
+                
+                // Revoke object URL to free memory
+                URL.revokeObjectURL(audioUrl);
+            };
+            
+            audioElement.onerror = (e) => {
+                console.error(`Audio error for ${aiId}:`, e);
+                this.updateSpeakingState(aiId, false);
+                callback();
+            };
+            
+            // Try to play audio
+            try {
+                audioElement.load(); // Force reload
+                console.log(`Attempting to play audio for ${aiId}`);
+            } catch (e) {
+                console.error('Error loading audio:', e);
+                this.updateSpeakingState(aiId, false);
+                callback();
             }
-            
-        } catch (error) {
-            console.error('Error speaking text:', error);
-            
-            // Update UI to show not speaking state
-            this.updateSpeakingState(aiId, false);
-            
-            // Call callback on error
-            callback();
+        } else {
+            // If not audio, it's likely an error - try to parse as JSON
+            console.warn('Response is not audio, trying to parse as JSON');
+            try {
+                const errorData = await response.json();
+                throw new Error(`TTS API error: ${errorData.error || 'Unknown error'}`);
+            } catch (e) {
+                const responseText = await response.text();
+                throw new Error(`TTS API returned non-audio response: ${responseText.substring(0, 100)}`);
+            }
         }
+        
+    } catch (error) {
+        console.error('Error speaking text:', error);
+        
+        // Update UI to show not speaking state
+        this.updateSpeakingState(aiId, false);
+        
+        // Call callback on error
+        callback();
     }
-    
+}
     /**
      * Update UI to show speaking state
      * @param {string} aiId - The ID of the AI agent

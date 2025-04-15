@@ -245,6 +245,46 @@ require_once 'includes/config.php';
         position: relative;
         padding-bottom: 15px; /* Add some padding for the badge */
     }
+    /* Improved conversation header styles */
+.conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.conversation-header-buttons {
+    display: flex;
+    align-items: center;
+}
+
+/* Speaking button animation */
+.speaking-animation {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(176, 251, 193, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(176, 251, 193, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(176, 251, 193, 0); }
+}
+
+/* Share/Play buttons */
+#share-conversation-btn, #play-conversation-btn {
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+#share-conversation-btn:hover, #play-conversation-btn:hover {
+    background-color: var(--btn-bg);
+}
+
+/* Status indicator spacing */
+#conversation-status {
+    margin-left: auto;
+}
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -540,7 +580,90 @@ document.addEventListener('DOMContentLoaded', function() {
     document.head.appendChild(style);
 });
 </script>
-
+<script>
+// Direct fix for share button placement
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for the page to be fully loaded
+    setTimeout(function() {
+        // Find the conversation header container
+        const conversationHeader = document.querySelector('.bg-gray-700.rounded-lg.p-3.flex.flex-col h2');
+        
+        if (conversationHeader) {
+            // Create buttons container if it doesn't exist
+            let buttonContainer = document.querySelector('.conversation-header-buttons');
+            
+            if (!buttonContainer) {
+                buttonContainer = document.createElement('div');
+                buttonContainer.className = 'conversation-header-buttons flex items-center ml-auto';
+                
+                // Find the conversation status
+                const statusElement = document.getElementById('conversation-status');
+                const headerParent = conversationHeader.parentNode;
+                
+                // Create a flex container to hold the title and buttons
+                const flexContainer = document.createElement('div');
+                flexContainer.className = 'flex justify-between items-center w-full';
+                
+                // Move the title into the flex container
+                headerParent.insertBefore(flexContainer, conversationHeader);
+                flexContainer.appendChild(conversationHeader);
+                
+                // Add buttons container to the flex container
+                flexContainer.appendChild(buttonContainer);
+                
+                // If status exists, move it after the flex container
+                if (statusElement) {
+                    headerParent.insertBefore(statusElement, flexContainer.nextSibling);
+                }
+            }
+            
+            // Create share button if it doesn't exist
+            if (!document.getElementById('share-conversation-btn')) {
+                const shareButton = document.createElement('button');
+                shareButton.id = 'share-conversation-btn';
+                shareButton.className = 'ml-2 px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm';
+                shareButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>Share';
+                
+                // Add event listener
+                shareButton.addEventListener('click', function() {
+                    if (window.conversationShare && typeof window.conversationShare.shareConversation === 'function') {
+                        window.conversationShare.shareConversation();
+                    } else {
+                        console.error('Conversation share functionality not available');
+                    }
+                });
+                
+                // Add to container
+                buttonContainer.appendChild(shareButton);
+            }
+            
+            // Create play button if it doesn't exist
+            if (!document.getElementById('play-conversation-btn')) {
+                const playButton = document.createElement('button');
+                playButton.id = 'play-conversation-btn';
+                playButton.className = 'ml-2 px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm hidden';
+                playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Play';
+                
+                // Add event listener
+                playButton.addEventListener('click', function() {
+                    if (window.conversationShare && typeof window.conversationShare.togglePlayConversation === 'function') {
+                        window.conversationShare.togglePlayConversation();
+                    } else {
+                        console.error('Conversation play functionality not available');
+                    }
+                });
+                
+                // Add to container
+                buttonContainer.appendChild(playButton);
+            }
+            
+            console.log('Share and play buttons added successfully');
+        } else {
+            console.error('Could not find conversation header element');
+        }
+    }, 500); // Give the page time to fully render
+});
+</script>
 </body>
 
 

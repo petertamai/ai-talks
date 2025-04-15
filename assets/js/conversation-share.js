@@ -9,6 +9,10 @@
 class ConversationShare {
     constructor() {
         this.conversationId = null;
+        this.isPlaying = false;
+        this.audioQueue = [];
+        this.currentAudioIndex = 0;
+        this.audioPlayer = new Audio();
         this.init();
     }
     
@@ -22,10 +26,7 @@ class ConversationShare {
             this.bindEvents();
             
             // Log initialization
-            if (window.debug) {
-                console.log('ConversationShare initialized with ID:', this.conversationId);
-                window.debug.log('ConversationShare initialized with ID: ' + this.conversationId);
-            }
+            console.log('ConversationShare initialized with ID:', this.conversationId);
         });
     }
     
@@ -47,34 +48,71 @@ class ConversationShare {
         this.conversationId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('currentConversationId', this.conversationId);
         
-        if (window.debug) {
-            console.log('ConversationShare reset with new ID:', this.conversationId);
-            window.debug.log('ConversationShare reset with new ID: ' + this.conversationId);
-        }
+        console.log('ConversationShare reset with new ID:', this.conversationId);
     }
     
     addShareButton() {
-        // Find the conversation-status element
-        const statusElement = document.getElementById('conversation-status');
+        // Find the conversation header element
+        const headerElement = document.querySelector('.bg-gray-700.rounded-lg.p-3.flex.flex-col.h-full h2');
         
-        if (!statusElement) {
-            console.error('Could not find conversation status element');
-            return;
+        if (!headerElement) {
+            console.error('Could not find conversation header element');
+            
+            // Try alternative selector
+            const altHeaderElement = document.querySelector('.flex.items-center.justify-between h2');
+            
+            if (!altHeaderElement) {
+                console.error('Could not find alternative conversation header element');
+                return;
+            }
         }
         
-        // Create a container for our buttons if it doesn't exist
+        // Create a flex container for the header
+        const headerParent = headerElement ? headerElement.parentNode : altHeaderElement.parentNode;
+        
+        // Find or create the button container
         let buttonContainer = document.querySelector('.conversation-header-buttons');
+        
         if (!buttonContainer) {
+            // Create the container if it doesn't exist
             buttonContainer = document.createElement('div');
             buttonContainer.className = 'conversation-header-buttons flex ml-2';
-            statusElement.parentNode.insertBefore(buttonContainer, statusElement.nextSibling);
+            
+            // Find the status element
+            const statusElement = document.getElementById('conversation-status');
+            
+            if (statusElement && headerParent === statusElement.parentNode) {
+                // Insert before status element
+                headerParent.insertBefore(buttonContainer, statusElement);
+            } else {
+                // Fallback: create a header container and reorganize elements
+                const headerContainer = document.createElement('div');
+                headerContainer.className = 'flex justify-between items-center w-full mb-2';
+                
+                // Get the header element
+                const headerToMove = headerElement || altHeaderElement;
+                
+                // Insert the header container before the original header
+                headerParent.insertBefore(headerContainer, headerToMove);
+                
+                // Move the header into the container
+                headerContainer.appendChild(headerToMove);
+                
+                // Add the button container
+                headerContainer.appendChild(buttonContainer);
+                
+                // If there's a status element, move it after the buttons
+                if (statusElement) {
+                    headerContainer.appendChild(statusElement);
+                }
+            }
         }
         
         // Create share button if it doesn't exist
         if (!document.getElementById('share-conversation-btn')) {
             const shareButton = document.createElement('button');
             shareButton.id = 'share-conversation-btn';
-            shareButton.className = 'ml-2 px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm'; // Removed 'hidden'
+            shareButton.className = 'ml-2 px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm';
             shareButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>Share';
             
             // Add to our container
@@ -117,13 +155,22 @@ class ConversationShare {
     
     bindEvents() {
         // Share button click event
-        document.getElementById('share-conversation-btn')?.addEventListener('click', () => this.shareConversation());
+        const shareBtn = document.getElementById('share-conversation-btn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => this.shareConversation());
+        }
         
         // Play button click event
-        document.getElementById('play-conversation-btn')?.addEventListener('click', () => this.togglePlayConversation());
+        const playBtn = document.getElementById('play-conversation-btn');
+        if (playBtn) {
+            playBtn.addEventListener('click', () => this.togglePlayConversation());
+        }
         
         // When conversation starts, reset the ID
-        document.getElementById('start-conversation')?.addEventListener('click', () => this.resetConversationId());
+        const startBtn = document.getElementById('start-conversation');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => this.resetConversationId());
+        }
     }
     
     async shareConversation() {
@@ -194,6 +241,9 @@ class ConversationShare {
                         });
                     }
                 });
+                
+                // Check for audio after sharing
+                this.updatePlayButtonVisibility();
             } else {
                 Swal.fire({
                     title: 'Error',
@@ -218,35 +268,35 @@ class ConversationShare {
         const settings = {
             messageDirection: this.getSelectedDirection(),
             models: {
-                ai1: document.getElementById('ai1-model').value,
-                ai2: document.getElementById('ai2-model').value
+                ai1: document.getElementById('ai1-model')?.value || '',
+                ai2: document.getElementById('ai2-model')?.value || ''
             },
             names: {
-                ai1: document.getElementById('ai1-name').value,
-                ai2: document.getElementById('ai2-name').value
+                ai1: document.getElementById('ai1-name')?.value || 'AI-1',
+                ai2: document.getElementById('ai2-name')?.value || 'AI-2'
             },
             prompts: {
-                ai1: document.getElementById('ai1-prompt').value,
-                ai2: document.getElementById('ai2-prompt').value
+                ai1: document.getElementById('ai1-prompt')?.value || '',
+                ai2: document.getElementById('ai2-prompt')?.value || ''
             },
             tts: {
                 ai1: {
-                    enabled: document.getElementById('ai1-tts-enabled').checked,
-                    voice: document.getElementById('ai1-voice').value
+                    enabled: document.getElementById('ai1-tts-enabled')?.checked || false,
+                    voice: document.getElementById('ai1-voice')?.value || 'Arista-PlayAI'
                 },
                 ai2: {
-                    enabled: document.getElementById('ai2-tts-enabled').checked,
-                    voice: document.getElementById('ai2-voice').value
+                    enabled: document.getElementById('ai2-tts-enabled')?.checked || false,
+                    voice: document.getElementById('ai2-voice')?.value || 'Angelo-PlayAI'
                 }
             },
             parameters: {
                 ai1: {
-                    maxTokens: document.getElementById('ai1-max-tokens').value,
-                    temperature: document.getElementById('ai1-temperature').value
+                    maxTokens: document.getElementById('ai1-max-tokens')?.value || 1200,
+                    temperature: document.getElementById('ai1-temperature')?.value || 0.5
                 },
                 ai2: {
-                    maxTokens: document.getElementById('ai2-max-tokens').value,
-                    temperature: document.getElementById('ai2-temperature').value
+                    maxTokens: document.getElementById('ai2-max-tokens')?.value || 1200,
+                    temperature: document.getElementById('ai2-temperature')?.value || 0.5
                 }
             }
         };
@@ -261,7 +311,8 @@ class ConversationShare {
             const isHuman = element.classList.contains('human');
             
             // Get message content
-            const content = element.querySelector('.message-text')?.textContent || element.textContent;
+            const messageText = element.querySelector('.message-text');
+            const content = messageText ? messageText.textContent : element.textContent;
             
             // Get model name if available
             const modelBadge = element.querySelector('.model-badge');
@@ -305,23 +356,54 @@ class ConversationShare {
     // Audio playback functionality
     async hasAudioRecordings() {
         try {
+            console.log(`Checking for audio recordings for conversation: ${this.conversationId}`);
             const response = await fetch(`api/check-audio-recordings.php?conversation_id=${this.conversationId}`);
+            
+            if (!response.ok) {
+                console.error(`Error checking for audio recordings: ${response.status}`);
+                return false;
+            }
+            
             const data = await response.json();
-            return data.hasAudio;
+            console.log('Audio check response:', data);
+            
+            return data.hasAudio === true;
         } catch (error) {
             console.error('Error checking for audio recordings:', error);
             return false;
         }
     }
     
-    // Variable to track audio playback
-    isPlaying = false;
-    audioQueue = [];
-    currentAudioIndex = 0;
-    audioPlayer = new Audio();
+    async updatePlayButtonVisibility() {
+        try {
+            console.log(`Checking audio for conversation: ${this.conversationId}`);
+            
+            const response = await fetch(`api/check-audio-recordings.php?conversation_id=${this.conversationId}`);
+            const data = await response.json();
+            
+            console.log('Audio check result:', data);
+            
+            if (data && data.hasAudio === true) {
+                this.showPlayButton(true);
+                return true;
+            } else {
+                this.showPlayButton(false);
+                return false;
+            }
+        } catch (error) {
+            console.error('Error checking for audio recordings:', error);
+            this.showPlayButton(false);
+            return false;
+        }
+    }
     
     async togglePlayConversation() {
         const playButton = document.getElementById('play-conversation-btn');
+        
+        if (!playButton) {
+            console.error('Play button not found');
+            return;
+        }
         
         if (this.isPlaying) {
             // Stop playing
@@ -338,11 +420,19 @@ class ConversationShare {
             // Start playing
             if (this.audioQueue.length === 0) {
                 try {
+                    console.log(`Loading audio files for: ${this.conversationId}`);
                     const response = await fetch(`api/get-conversation-audio.php?conversation_id=${this.conversationId}`);
-                    const data = await response.json();
                     
-                    if (data.success && data.audioFiles.length > 0) {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load audio files: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Audio files response:', data);
+                    
+                    if (data.success && data.audioFiles && data.audioFiles.length > 0) {
                         this.audioQueue = data.audioFiles;
+                        console.log(`Loaded ${this.audioQueue.length} audio files`);
                     } else {
                         Swal.fire({
                             title: 'No Audio Available',
@@ -356,7 +446,7 @@ class ConversationShare {
                     console.error('Error loading audio files:', error);
                     Swal.fire({
                         title: 'Error',
-                        text: 'Failed to load audio files',
+                        text: 'Failed to load audio files: ' + error.message,
                         icon: 'error',
                         confirmButtonColor: '#397BFB'
                     });
@@ -375,9 +465,20 @@ class ConversationShare {
     playCurrentAudio() {
         if (this.currentAudioIndex < this.audioQueue.length) {
             const audioFile = this.audioQueue[this.currentAudioIndex];
+            console.log(`Playing audio file: ${audioFile}`);
+            
             this.audioPlayer.src = `conversations/${this.conversationId}/audio/${audioFile}`;
             this.audioPlayer.onended = () => this.playNextAudio();
-            this.audioPlayer.play();
+            this.audioPlayer.onerror = (e) => {
+                console.error('Audio playback error:', e);
+                this.playNextAudio(); // Skip to next on error
+            };
+            
+            // Try to play the audio
+            this.audioPlayer.play().catch(err => {
+                console.error('Failed to play audio:', err);
+                this.playNextAudio(); // Skip to next on error
+            });
             
             // Highlight the corresponding message
             this.highlightCurrentMessage(audioFile);
@@ -417,7 +518,7 @@ class ConversationShare {
             el.classList.remove('speaking');
         });
         
-        // Extract index from filename (assuming format like message_123.mp3 or ai1_123.mp3)
+        // Extract index from filename (assuming format like message_123.mp3)
         let indexMatch = audioFile.match(/_([\d]+)/);
         if (indexMatch && indexMatch[1]) {
             const messageIndex = parseInt(indexMatch[1]);
@@ -429,19 +530,10 @@ class ConversationShare {
             }
         }
     }
-    
-    // Method to check for audio and update the play button visibility
-    async updatePlayButtonVisibility() {
-        const hasAudio = await this.hasAudioRecordings();
-        this.showPlayButton(hasAudio);
-    }
 }
 
 // Initialize the conversation share functionality
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Initializing ConversationShare...");
-    const conversationShare = new ConversationShare();
-    
-    // Make it available globally
-    window.conversationShare = conversationShare;
+    window.conversationShare = new ConversationShare();
 });

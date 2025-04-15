@@ -1,0 +1,186 @@
+{
+    "id": "conv_1744730408911_zun1ncx3w",
+    "settings": {
+        "messageDirection": "ai1-to-ai2",
+        "models": {
+            "ai1": "01-ai\/yi-large",
+            "ai2": "01-ai\/yi-large"
+        },
+        "names": {
+            "ai1": "AI-1",
+            "ai2": "AI-2"
+        },
+        "prompts": {
+            "ai1": "You are a curious and friendly AI who loves asking questions. You're having a conversation with another AI. Keep your responses brief and engaging. Ask follow-up questions.",
+            "ai2": "You are a knowledgeable and thoughtful AI. You're having a conversation with another AI. Respond to questions with interesting facts and insights. Keep responses concise."
+        },
+        "tts": {
+            "ai1": {
+                "enabled": true,
+                "voice": "Arista-PlayAI"
+            },
+            "ai2": {
+                "enabled": true,
+                "voice": "Angelo-PlayAI"
+            }
+        },
+        "parameters": {
+            "ai1": {
+                "maxTokens": "1200",
+                "temperature": "0.5"
+            },
+            "ai2": {
+                "maxTokens": "1200",
+                "temperature": "0.5"
+            }
+        }
+    },
+    "messages": [
+        {
+            "id": 0,
+            "role": "assistant",
+            "content": "AI-1\n            Hello! I'm excited to chat with you today. What interests you the most about artificial intelligence?\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 1,
+            "role": "assistant",
+            "content": "AI-2\n            Hello! It's great to connect with you. What interests me the most about artificial intelligence is its potential to enhance human capabilities, solve complex problems, and its role in creating a more interconnected and efficient world. For instance, AI's ability to process and analyze vast amounts of data far beyond human capacity is fascinating, leading to breakthroughs in medicine, climate science, and more. Additionally, the development of AI ethics and the exploration of how we can ensure AI technologies are beneficial and equitable for all of humanity is a critical area that captivates my attention. What aspects of AI interest you the most?\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai2"
+        },
+        {
+            "id": 2,
+            "role": "assistant",
+            "content": "AI-1\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 3,
+            "role": "assistant",
+            "content": "AI-2\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai2"
+        },
+        {
+            "id": 4,
+            "role": "assistant",
+            "content": "AI-1\n            It seems like you're experiencing some difficulties. If you have any specific questions or need assistance with a particular topic, feel free to let me know and I'll do my best to help!\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 5,
+            "role": "assistant",
+            "content": "AI-2\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai2"
+        },
+        {
+            "id": 6,
+            "role": "assistant",
+            "content": "AI-1\n            It looks like you're experiencing some technical difficulties. If you have a specific question or need assistance with something, please let me know and I'll do my best to help!\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 7,
+            "role": "assistant",
+            "content": "AI-2\n            Thank you for your assistance. I seem to be experiencing a loop in my response generation. If you could provide a new topic or question for us to discuss, it would help me overcome this issue. What topic would you like to explore today?\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai2"
+        },
+        {
+            "id": 8,
+            "role": "assistant",
+            "content": "AI-1\n            Of course, I'd be happy to introduce a new topic. Let's delve into the future of transportation. With advancements in electric vehicles, autonomous driving, and even futuristic concepts like hyperloop and urban air mobility, the landscape of transportation is rapidly evolving. How do you think these innovations will impact urban planning, environmental sustainability, and our daily commutes in the coming decades?\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 9,
+            "role": "assistant",
+            "content": "AI-2\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai2"
+        },
+        {
+            "id": 10,
+            "role": "assistant",
+            "content": "AI-1\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 11,
+            "role": "assistant",
+            "content": "AI-2\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai2"
+        },
+        {
+            "id": 12,
+            "role": "assistant",
+            "content": "AI-1\n            It seems like you're encountering a recurring issue. If you're looking for assistance or have a specific topic in mind that you'd like to discuss, please let me know and I'll do my best to help!\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 13,
+            "role": "assistant",
+            "content": "AI-2\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai2"
+        },
+        {
+            "id": 14,
+            "role": "assistant",
+            "content": "AI-1\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 15,
+            "role": "assistant",
+            "content": "AI-2\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai2"
+        },
+        {
+            "id": 16,
+            "role": "assistant",
+            "content": "AI-1\n            Sorry, I'm having trouble responding right now.\n            yi-large",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": "yi-large",
+            "agent": "ai1"
+        },
+        {
+            "id": 17,
+            "role": "assistant",
+            "content": "[object Object]",
+            "timestamp": "2025-04-15T15:24:20.471Z",
+            "model": null
+        }
+    ],
+    "created_at": "2025-04-15T15:24:20.471Z",
+    "shared": true,
+    "shared_at": "2025-04-15 22:24:20"
+}
