@@ -189,11 +189,17 @@ require_once 'includes/config.php';
         <div class="bg-gray-700 rounded-lg p-4 my-4">
             <h2 class="text-xl font-bold mb-2">Conversation Starter</h2>
             <div class="mb-4">
-                <label class="block text-sm font-medium mb-1">Starting AI</label>
-                <select id="starting-ai" class="w-full md:w-auto p-2 bg-gray-800 rounded">
-                    <option value="ai1">AI Agent 1</option>
-                    <option value="ai2">AI Agent 2</option>
-                </select>
+                <label class="block text-sm font-medium mb-1">Message Direction</label>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center">
+                        <input type="radio" id="direction-human-to-ai2" name="conversation-direction" value="human-to-ai2" class="mr-2" checked>
+                        <label for="direction-human-to-ai2">Human → AI Agent 2 → AI Agent 1</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="radio" id="direction-human-to-ai1" name="conversation-direction" value="human-to-ai1" class="mr-2">
+                        <label for="direction-human-to-ai1">Human → AI Agent 1 → AI Agent 2</label>
+                    </div>
+                </div>
             </div>
             <div class="mb-4">
                 <label class="block text-sm font-medium mb-1">Starting Message</label>

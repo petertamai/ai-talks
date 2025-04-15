@@ -384,9 +384,6 @@ $(document).ready(function() {
         try {
             debugLog(`Processing turn for ${currentAi} responding to: ${message.substring(0, 50)}...`);
             
-            // Add incoming message to current AI's chat history
-            addMessageToChat(currentAi, message, false);
-            
             // Add a thinking delay
             await addThinkingDelay(currentAi);
             
@@ -422,6 +419,9 @@ $(document).ready(function() {
             // Add a brief pause between turns
             await new Promise(resolve => setTimeout(resolve, 800));
             
+            // Add this AI's response to the other AI's chat window as a human message
+            addMessageToChat(otherAi, response, false);
+            
             // Now process the other AI's turn
             await processTurn(otherAi, currentAi, response);
             
@@ -444,10 +444,19 @@ $(document).ready(function() {
                 ];
                 const randomTopic = topics[Math.floor(Math.random() * topics.length)];
                 const fallbackMessage = `I'd like to talk about something different. What do you think about ${randomTopic}?`;
+                
+                // Add fallback message to current AI's chat as its response
+                addMessageToChat(currentAi, fallbackMessage, true);
+                
+                // Add fallback message to other AI's chat as a human message
+                addMessageToChat(otherAi, fallbackMessage, false);
+                
+                // Continue with other AI
                 await processTurn(otherAi, currentAi, fallbackMessage);
             }
         }
     }
+    
     
     // Start conversation
     $('#start-conversation').click(async function() {
@@ -474,15 +483,28 @@ $(document).ready(function() {
             ai2: []
         };
         
-        // Get starting AI and message
-        const startingAi = $('#starting-ai').val();
+        // Get conversation direction and starting message
+        const direction = $('input[name="conversation-direction"]:checked').val();
         const startingMessage = $('#starting-message').val();
-        const otherAi = startingAi === 'ai1' ? 'ai2' : 'ai1';
         
-        debugLog(`Starting conversation with ${startingAi}, message: ${startingMessage}`);
+        // Determine which AI to start with based on direction
+        let startingAi, otherAi;
+        if (direction === 'human-to-ai1') {
+            startingAi = 'ai1';
+            otherAi = 'ai2';
+        } else {
+            startingAi = 'ai2';
+            otherAi = 'ai1';
+        }
+        
+        debugLog(`Starting conversation with direction: ${direction}`);
+        debugLog(`First AI to respond: ${startingAi}, to message: ${startingMessage}`);
+        
+        // Add the starting message to the starting AI's chat window as a human message
+        addMessageToChat(startingAi, startingMessage, false);
         
         try {
-            // Process the first turn
+            // Process the first turn with the starting AI
             await processTurn(startingAi, otherAi, startingMessage);
         } catch (error) {
             debugLog(`Error starting conversation: ${error.message}`);
