@@ -8,18 +8,26 @@
  */
 
 // Add message to chat
-function addMessageToChat(sender, text) {
+function addMessageToChat(sender, text, modelId = null) {
     const chatContainer = $('#chat-container');
-    let messageClass, agentName;
+    let messageClass, agentName, modelName = '';
     
     if (sender === 'ai1') {
         messageClass = 'ai1';
         agentName = $('#ai1-name').val() || 'AI-1';
+        // Get current model name if not provided
+        if (!modelId) {
+            modelId = $('#ai1-model').val();
+        }
         // Hide typing indicator if it was showing
         hideTypingIndicator('ai1');
     } else if (sender === 'ai2') {
         messageClass = 'ai2';
         agentName = $('#ai2-name').val() || 'AI-2';
+        // Get current model name if not provided
+        if (!modelId) {
+            modelId = $('#ai2-model').val();
+        }
         // Hide typing indicator if it was showing
         hideTypingIndicator('ai2');
     } else {
@@ -27,11 +35,19 @@ function addMessageToChat(sender, text) {
         agentName = 'Human';
     }
     
-    // Add message to container with clear identification
+    // Extract model name after first slash if it exists
+    if (modelId && modelId.includes('/')) {
+        modelName = modelId.split('/')[1];
+    }
+    
+    // Add message to container with clear identification and model badge
+    const modelBadge = modelName ? `<div class="model-badge">${modelName}</div>` : '';
+    
     chatContainer.append(`
         <div class="chat-message ${messageClass}">
             <div class="agent-name">${agentName}</div>
             ${text}
+            ${modelBadge}
         </div>
     `);
     
@@ -42,22 +58,59 @@ function addMessageToChat(sender, text) {
     conversationHistory.push({
         sender: sender,
         text: text,
+        modelId: modelId,
         timestamp: new Date().toISOString()
     });
 }
 
 // Show typing indicator for an AI
 function showTypingIndicator(aiId) {
+    // Create the typing indicator if it doesn't exist in the DOM
+    const typingContainer = $(`#${aiId}-typing`);
+    if (typingContainer.length === 0) {
+        debugLog(`Typing indicator container for ${aiId} not found, creating it`);
+        
+        // Create the container and typing indicator
+        $(`<div id="${aiId}-typing" class="typing-indicator-container">
+            <div class="typing-indicator ${aiId}">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>`).appendTo('#chat-container');
+        
+        // Style it according to which AI is typing
+        $(`#${aiId}-typing`).css({
+            'align-self': aiId === 'ai1' ? 'flex-start' : 'flex-end',
+            'display': 'none'
+        });
+    }
+    
+    // Make sure the chat container is set up as a flex container
+    $('#chat-container').css({
+        'display': 'flex',
+        'flex-direction': 'column'
+    });
+    
+    // Show the typing indicator
     $(`#${aiId}-typing`).show();
-    // Position it correctly in the chat
-    const chatContainer = $('#chat-container');
-    $(`#${aiId}-typing`).appendTo(chatContainer);
+    
+    // Position it correctly in the chat container
+    $(`#${aiId}-typing`).appendTo('#chat-container');
+    
+    // Force scroll to bottom to show the typing indicator
     scrollToBottom();
+    
+    debugLog(`Typing indicator for ${aiId} shown`);
 }
 
 // Hide typing indicator
 function hideTypingIndicator(aiId) {
-    $(`#${aiId}-typing`).hide();
+    const typingContainer = $(`#${aiId}-typing`);
+    if (typingContainer.length > 0) {
+        typingContainer.hide();
+        debugLog(`Typing indicator for ${aiId} hidden`);
+    }
 }
 
 // Update UI speaking state
@@ -77,23 +130,30 @@ function updateSpeakingState(aiId, isSpeaking) {
 
 // Add "thinking" delay to make conversation more natural
 async function addThinkingDelay(aiId) {
-    // Show thinking state
-    const statusElement = document.getElementById('conversation-status');
-    const aiName = $(`#${aiId}-name`).val() || aiId;
-    
-    statusElement.textContent = `${aiName} is thinking`;
-    statusElement.className = 'text-sm px-2 py-1 rounded bg-yellow-600';
-    
-    // Show typing indicator
-    showTypingIndicator(aiId);
-    
-    // Random delay between 1-3 seconds
-    const thinkingTime = 1000 + Math.random() * 2000;
-    debugLog(`${aiId} thinking for ${Math.round(thinkingTime)}ms`);
-    
-    return new Promise(resolve => setTimeout(resolve, thinkingTime));
+    try {
+        // Show thinking state in status bar
+        const statusElement = document.getElementById('conversation-status');
+        const aiName = $(`#${aiId}-name`).val() || aiId;
+        
+        statusElement.textContent = `${aiName} is thinking`;
+        statusElement.className = 'text-sm px-2 py-1 rounded bg-yellow-600';
+        
+        // Make sure we show the typing indicator regardless of TTS setting
+        showTypingIndicator(aiId);
+        
+        // Random delay between 1-3 seconds
+        const thinkingTime = 1000 + Math.random() * 2000;
+        debugLog(`${aiId} thinking for ${Math.round(thinkingTime)}ms`);
+        
+        return new Promise(resolve => setTimeout(resolve, thinkingTime));
+    } catch (error) {
+        debugLog(`Error in thinking delay: ${error.message}`);
+        // Continue anyway with a minimal delay
+        return new Promise(resolve => setTimeout(resolve, 1000));
+    }
 }
 
+// Process conversation turn
 // Process conversation turn
 async function processTurn(currentAi, message, isFirstMessage = false) {
     if (!conversationActive) {
@@ -115,11 +175,19 @@ async function processTurn(currentAi, message, isFirstMessage = false) {
             return;
         }
         
-        // Get AI response
-        const response = await getAIResponse(currentAi, message);
+        // Get the model information
+        const modelId = $(`#${currentAi}-model`).val();
+        const temperature = parseFloat($(`#${currentAi}-temperature`).val()) || 0.5;
+        const maxTokens = parseInt($(`#${currentAi}-max-tokens`).val()) || 1200;
+        
+        // Get AI response with model parameters
+        const response = await getAIResponse(currentAi, message, modelId, temperature, maxTokens);
+        
+        // Hide typing indicator before showing the response
+        hideTypingIndicator(currentAi);
         
         // Add AI response to chat - this AI is responding (shown as an AI message)
-        addMessageToChat(currentAi, response);
+        addMessageToChat(currentAi, response, modelId);
         
         // Speak the response if TTS is enabled
         try {
@@ -173,6 +241,9 @@ async function processTurn(currentAi, message, isFirstMessage = false) {
     } catch (error) {
         debugLog(`Error in processTurn: ${error.message}`);
         
+        // Make sure to hide the typing indicator if there was an error
+        hideTypingIndicator(currentAi);
+        
         if (conversationActive) {
             // Wait a moment before trying to recover
             await new Promise(resolve => setTimeout(resolve, 1500));
@@ -191,7 +262,7 @@ async function processTurn(currentAi, message, isFirstMessage = false) {
             const fallbackMessage = `I'd like to talk about something different. What do you think about ${randomTopic}?`;
             
             // Add fallback message as coming from current AI
-            addMessageToChat(currentAi, fallbackMessage);
+            addMessageToChat(currentAi, fallbackMessage, $(`#${currentAi}-model`).val());
             
             // Continue with other AI
             const otherAi = currentAi === 'ai1' ? 'ai2' : 'ai1';
@@ -284,6 +355,10 @@ async function startConversation() {
         $('#start-conversation').prop('disabled', false);
         $('#stop-conversation').prop('disabled', true);
         conversationActive = false;
+        
+        // Make sure we hide any typing indicators that might be showing
+        hideTypingIndicator('ai1');
+        hideTypingIndicator('ai2');
     }
 }
 

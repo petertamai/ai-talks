@@ -53,7 +53,7 @@ require_once 'includes/config.php';
             min-height: 200px;
             display: flex;
             flex-direction: column;
-            max-height: calc(100vh - 300px);
+            max-height: calc(93vh - 115px);
             scrollbar-width: thin;
             scrollbar-color: var(--btn-bg) var(--bg-color);
         }
@@ -216,7 +216,34 @@ require_once 'includes/config.php';
         .select2-container--classic .select2-search--dropdown .select2-search__field {
             color: #000000;
         }
-
+        .model-badge {
+        position: absolute;
+        bottom: -12px;
+        font-size: 11px;
+        background-color: rgba(0,0,0,0.5);
+        padding: 2px 6px;
+        border-radius: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
+    }
+    
+    .chat-message.ai1 .model-badge {
+        left: 10px;
+        color: var(--accent-1);
+    }
+    
+    .chat-message.ai2 .model-badge {
+        right: 10px;
+        color: white;
+    }
+    
+    /* Make the chat message have relative positioning to place the badge */
+    .chat-message {
+        position: relative;
+        padding-bottom: 15px; /* Add some padding for the badge */
+    }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -243,190 +270,223 @@ require_once 'includes/config.php';
     </header>
 
     <main class="container mx-auto p-3">
-        <!-- Settings Panel -->
-        <div id="settings-panel" class="settings-panel bg-gray-800 rounded-lg p-3 mb-3">
-            <h2 class="text-xl font-bold mb-3">Settings</h2>
-            
-            <!-- API Keys -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                <div class="bg-gray-700 rounded-lg p-3">
-                    <h3 class="text-lg font-bold mb-2">OpenRouter API Key</h3>
-                    <div class="mb-2">
-                        <input type="password" id="openrouter-api-key" class="w-full p-2 bg-gray-800 rounded form-control" 
-                               placeholder="Enter OpenRouter API key" value="<?php echo htmlspecialchars(OPENROUTER_API_KEY); ?>">
-                    </div>
-                    <p class="text-xs opacity-75 mb-2">Your API key is stored securely in your browser cookies.</p>
-                    <button id="save-openrouter-key" class="btn-primary px-3 py-1 rounded text-sm">Save Key</button>
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="settings-panel bg-gray-800 rounded-lg p-3 mb-3">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-xl font-bold">Settings</h2>
+            <button id="close-settings" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm">
+                Close
+            </button>
+        </div>
+        
+        <!-- API Keys -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div class="bg-gray-700 rounded-lg p-3">
+                <h3 class="text-lg font-bold mb-2">OpenRouter API Key</h3>
+                <div class="mb-2">
+                    <input type="password" id="openrouter-api-key" class="w-full p-2 bg-gray-800 rounded form-control" 
+                           placeholder="Enter OpenRouter API key" value="<?php echo htmlspecialchars(OPENROUTER_API_KEY); ?>">
                 </div>
-                
-                <div class="bg-gray-700 rounded-lg p-3">
-                    <h3 class="text-lg font-bold mb-2">Groq API Key <span class="text-xs">(Optional for TTS)</span></h3>
-                    <div class="mb-2">
-                        <input type="password" id="groq-api-key" class="w-full p-2 bg-gray-800 rounded form-control" 
-                               placeholder="Enter Groq API key (optional)" value="<?php echo htmlspecialchars(GROQ_API_KEY); ?>">
-                    </div>
-                    <p class="text-xs opacity-75 mb-2">Required only if you want text-to-speech.</p>
-                    <button id="save-groq-key" class="btn-primary px-3 py-1 rounded text-sm">Save Key</button>
-                </div>
+                <p class="text-xs opacity-75 mb-2">Your API key is stored securely in your browser cookies.</p>
+                <button id="save-openrouter-key" class="btn-primary px-3 py-1 rounded text-sm">Save Key</button>
             </div>
             
-            <!-- AI Configuration -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <!-- AI 1 Configuration -->
-                <div class="bg-gray-700 rounded-lg p-3">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-bold">AI Agent 1</h3>
-                        <div class="flex items-center">
-                            <label class="text-xs mr-2">Name:</label>
-                            <input type="text" id="ai1-name" class="p-1 bg-gray-800 rounded w-24 form-control" value="AI-1">
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium mb-1">Model</label>
-                        <select id="ai1-model" class="model-select w-full p-2 bg-gray-800 rounded form-control">
-                            <option value="">Loading models...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-sm font-medium">Text-to-Speech</label>
-                            <label class="inline-flex items-center">
-                                <input type="checkbox" id="ai1-tts-enabled" class="form-checkbox rounded">
-                                <span class="ml-2 text-xs">Enabled</span>
-                            </label>
-                        </div>
-                        <select id="ai1-voice" class="w-full p-2 bg-gray-800 rounded form-control" disabled>
-                            <option value="Arista-PlayAI" selected>Arista (Female)</option>
-                            <option value="Angelo-PlayAI">Angelo (Male)</option>
-                            <option value="Nova-PlayAI">Nova (Female)</option>
-                            <option value="Atlas-PlayAI">Atlas (Male)</option>
-                            <option value="Indigo-PlayAI">Indigo (Neutral)</option>
-                            <!-- More voice options can be added here -->
-                        </select>
-                    </div>
-                    
-                    <div class="mb-2">
-                        <label class="block text-sm font-medium mb-1">System Prompt</label>
-                        <textarea id="ai1-prompt" class="w-full p-2 bg-gray-800 rounded h-20 form-control" placeholder="Instructions for AI behavior..."
-                        >You are a curious and friendly AI who loves asking questions. You're having a conversation with another AI. Keep your responses brief and engaging. Ask follow-up questions.</textarea>
-                    </div>
+            <div class="bg-gray-700 rounded-lg p-3">
+                <h3 class="text-lg font-bold mb-2">Groq API Key <span class="text-xs">(Optional for TTS)</span></h3>
+                <div class="mb-2">
+                    <input type="password" id="groq-api-key" class="w-full p-2 bg-gray-800 rounded form-control" 
+                           placeholder="Enter Groq API key (optional)" value="<?php echo htmlspecialchars(GROQ_API_KEY); ?>">
                 </div>
-                
-                <!-- AI 2 Configuration -->
-                <div class="bg-gray-700 rounded-lg p-3">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-bold">AI Agent 2</h3>
-                        <div class="flex items-center">
-                            <label class="text-xs mr-2">Name:</label>
-                            <input type="text" id="ai2-name" class="p-1 bg-gray-800 rounded w-24 form-control" value="AI-2">
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium mb-1">Model</label>
-                        <select id="ai2-model" class="model-select w-full p-2 bg-gray-800 rounded form-control">
-                            <option value="">Loading models...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-sm font-medium">Text-to-Speech</label>
-                            <label class="inline-flex items-center">
-                                <input type="checkbox" id="ai2-tts-enabled" class="form-checkbox rounded">
-                                <span class="ml-2 text-xs">Enabled</span>
-                            </label>
-                        </div>
-                        <select id="ai2-voice" class="w-full p-2 bg-gray-800 rounded form-control" disabled>
-                            <option value="Angelo-PlayAI" selected>Angelo (Male)</option>
-                            <option value="Arista-PlayAI">Arista (Female)</option>
-                            <option value="Nova-PlayAI">Nova (Female)</option>
-                            <option value="Atlas-PlayAI">Atlas (Male)</option>
-                            <option value="Indigo-PlayAI">Indigo (Neutral)</option>
-                            <!-- More voice options can be added here -->
-                        </select>
-                    </div>
-                    
-                    <div class="mb-2">
-                        <label class="block text-sm font-medium mb-1">System Prompt</label>
-                        <textarea id="ai2-prompt" class="w-full p-2 bg-gray-800 rounded h-20 form-control" placeholder="Instructions for AI behavior..."
-                        >You are a knowledgeable and thoughtful AI. You're having a conversation with another AI. Respond to questions with interesting facts and insights. Keep responses concise.</textarea>
-                    </div>
-                </div>
+                <p class="text-xs opacity-75 mb-2">Required only if you want text-to-speech.</p>
+                <button id="save-groq-key" class="btn-primary px-3 py-1 rounded text-sm">Save Key</button>
             </div>
         </div>
         
-        <!-- Debug Panel (hidden by default) -->
-        <div id="debug-panel" class="hidden bg-black text-green-400 p-2 rounded mb-3 overflow-y-auto text-xs font-mono" style="max-height: 200px;">
-            <!-- Debug logs will appear here -->
-        </div>
-        
-        <div class="content-container">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 h-full">
-                <!-- Conversation Starter -->
-                <div class="bg-gray-700 rounded-lg p-3">
-                    <h2 class="text-xl font-bold mb-2">Conversation Starter</h2>
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium mb-1">Message Direction</label>
-                        <div class="flex flex-wrap items-center gap-3">
-                            <div class="flex items-center">
-                                <input type="radio" id="direction-human-to-ai1" name="conversation-direction" value="human-to-ai1" class="mr-2">
-                                <label for="direction-human-to-ai1" class="text-sm">Human → AI-1</label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="radio" id="direction-ai1-to-ai2" name="conversation-direction" value="ai1-to-ai2" class="mr-2" checked>
-                                <label for="direction-ai1-to-ai2" class="text-sm">AI-1 → AI-2</label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="radio" id="direction-human-to-ai2" name="conversation-direction" value="human-to-ai2" class="mr-2">
-                                <label for="direction-human-to-ai2" class="text-sm">Human → AI-2</label>
-                            </div>
-                            <div class="flex items-center">
-                                <input type="radio" id="direction-ai2-to-ai1" name="conversation-direction" value="ai2-to-ai1" class="mr-2">
-                                <label for="direction-ai2-to-ai1" class="text-sm">AI-2 → AI-1</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium mb-1">Starting Message</label>
-                        <textarea id="starting-message" class="w-full p-2 bg-gray-800 rounded h-24 lg:h-48 form-control">Hello! I'm excited to chat with you today. What interests you the most about artificial intelligence?</textarea>
-                    </div>
-                    <div class="flex justify-between">
-                        <button id="start-conversation" class="btn-primary px-4 py-2 rounded font-bold">Start Conversation</button>
-                        <button id="stop-conversation" class="bg-red-600 px-4 py-2 rounded font-bold" disabled>Stop Conversation</button>
+        <!-- AI Configuration -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- AI 1 Configuration -->
+            <div class="bg-gray-700 rounded-lg p-3">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-bold">AI Agent 1</h3>
+                    <div class="flex items-center">
+                        <label class="text-xs mr-2">Name:</label>
+                        <input type="text" id="ai1-name" class="p-1 bg-gray-800 rounded w-24 form-control" value="AI-1">
                     </div>
                 </div>
                 
-                <!-- Chat Window -->
-                <div class="bg-gray-700 rounded-lg p-3 flex flex-col h-full">
-                    <div class="flex items-center justify-between mb-2">
-                        <h2 class="text-xl font-bold">Conversation</h2>
-                        <div id="conversation-status" class="text-sm px-2 py-1 rounded bg-gray-600">Idle</div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Model</label>
+                    <select id="ai1-model" class="model-select w-full p-2 bg-gray-800 rounded form-control">
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+                
+                <!-- Add these model parameters in two columns -->
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Max Tokens</label>
+                        <input type="number" id="ai1-max-tokens" class="w-full p-2 bg-gray-800 rounded form-control" 
+                               value="1200" min="50" max="4000">
                     </div>
-                    <div id="chat-container" class="chat-container bg-gray-800 rounded-lg p-3 overflow-y-auto flex flex-col">
-                        <!-- Chat messages will be inserted here -->
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Temperature</label>
+                        <input type="number" id="ai1-temperature" class="w-full p-2 bg-gray-800 rounded form-control" 
+                               value="0.5" min="0" max="2" step="0.1">
                     </div>
-                    <!-- Typing indicators -->
-                    <div id="ai1-typing" class="typing-indicator-container">
-                        <div class="typing-indicator ai1">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-sm font-medium">Text-to-Speech</label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" id="ai1-tts-enabled" class="form-checkbox rounded">
+                            <span class="ml-2 text-xs">Enabled</span>
+                        </label>
+                    </div>
+                    <select id="ai1-voice" class="w-full p-2 bg-gray-800 rounded form-control" disabled>
+                        <option value="Arista-PlayAI" selected>Arista (Female)</option>
+                        <option value="Angelo-PlayAI">Angelo (Male)</option>
+                        <option value="Nova-PlayAI">Nova (Female)</option>
+                        <option value="Atlas-PlayAI">Atlas (Male)</option>
+                        <option value="Indigo-PlayAI">Indigo (Neutral)</option>
+                        <!-- More voice options can be added here -->
+                    </select>
+                </div>
+                
+                <div class="mb-2">
+                    <label class="block text-sm font-medium mb-1">System Prompt</label>
+                    <textarea id="ai1-prompt" class="w-full p-2 bg-gray-800 rounded h-20 form-control" placeholder="Instructions for AI behavior..."
+                    >You are a curious and friendly AI who loves asking questions. You're having a conversation with another AI. Keep your responses brief and engaging. Ask follow-up questions.</textarea>
+                </div>
+            </div>
+            
+            <!-- AI 2 Configuration -->
+            <div class="bg-gray-700 rounded-lg p-3">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-bold">AI Agent 2</h3>
+                    <div class="flex items-center">
+                        <label class="text-xs mr-2">Name:</label>
+                        <input type="text" id="ai2-name" class="p-1 bg-gray-800 rounded w-24 form-control" value="AI-2">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Model</label>
+                    <select id="ai2-model" class="model-select w-full p-2 bg-gray-800 rounded form-control">
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+                
+                <!-- Add these model parameters in two columns -->
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Max Tokens</label>
+                        <input type="number" id="ai2-max-tokens" class="w-full p-2 bg-gray-800 rounded form-control" 
+                               value="1200" min="50" max="4000">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Temperature</label>
+                        <input type="number" id="ai2-temperature" class="w-full p-2 bg-gray-800 rounded form-control" 
+                               value="0.5" min="0" max="2" step="0.1">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-sm font-medium">Text-to-Speech</label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" id="ai2-tts-enabled" class="form-checkbox rounded">
+                            <span class="ml-2 text-xs">Enabled</span>
+                        </label>
+                    </div>
+                    <select id="ai2-voice" class="w-full p-2 bg-gray-800 rounded form-control" disabled>
+                        <option value="Angelo-PlayAI" selected>Angelo (Male)</option>
+                        <option value="Arista-PlayAI">Arista (Female)</option>
+                        <option value="Nova-PlayAI">Nova (Female)</option>
+                        <option value="Atlas-PlayAI">Atlas (Male)</option>
+                        <option value="Indigo-PlayAI">Indigo (Neutral)</option>
+                        <!-- More voice options can be added here -->
+                    </select>
+                </div>
+                
+                <div class="mb-2">
+                    <label class="block text-sm font-medium mb-1">System Prompt</label>
+                    <textarea id="ai2-prompt" class="w-full p-2 bg-gray-800 rounded h-20 form-control" placeholder="Instructions for AI behavior..."
+                    >You are a knowledgeable and thoughtful AI. You're having a conversation with another AI. Respond to questions with interesting facts and insights. Keep responses concise.</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Debug Panel (hidden by default) -->
+    <div id="debug-panel" class="hidden bg-black text-green-400 p-2 rounded mb-3 overflow-y-auto text-xs font-mono" style="max-height: 200px;">
+        <!-- Debug logs will appear here -->
+    </div>
+    
+    <div class="content-container">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 h-full">
+            <!-- Conversation Starter -->
+            <div class="bg-gray-700 rounded-lg p-3">
+                <h2 class="text-xl font-bold mb-2">Conversation Starter</h2>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Message Direction</label>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center">
+                            <input type="radio" id="direction-human-to-ai1" name="conversation-direction" value="human-to-ai1" class="mr-2">
+                            <label for="direction-human-to-ai1" class="text-sm">Human → AI-1</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="direction-ai1-to-ai2" name="conversation-direction" value="ai1-to-ai2" class="mr-2" checked>
+                            <label for="direction-ai1-to-ai2" class="text-sm">AI-1 → AI-2</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="direction-human-to-ai2" name="conversation-direction" value="human-to-ai2" class="mr-2">
+                            <label for="direction-human-to-ai2" class="text-sm">Human → AI-2</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="direction-ai2-to-ai1" name="conversation-direction" value="ai2-to-ai1" class="mr-2">
+                            <label for="direction-ai2-to-ai1" class="text-sm">AI-2 → AI-1</label>
                         </div>
                     </div>
-                    <div id="ai2-typing" class="typing-indicator-container">
-                        <div class="typing-indicator ai2">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </div>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Starting Message</label>
+                    <textarea id="starting-message" class="w-full p-2 bg-gray-800 rounded h-24 lg:h-48 form-control">Hello! I'm excited to chat with you today. What interests you the most about artificial intelligence?</textarea>
+                </div>
+                <div class="flex justify-between">
+                    <button id="start-conversation" class="btn-primary px-4 py-2 rounded font-bold">Start Conversation</button>
+                    <button id="stop-conversation" class="bg-red-600 px-4 py-2 rounded font-bold" disabled>Stop Conversation</button>
+                </div>
+            </div>
+            
+            <!-- Chat Window -->
+            <div class="bg-gray-700 rounded-lg p-3 flex flex-col h-full">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-xl font-bold">Conversation</h2>
+                    <div id="conversation-status" class="text-sm px-2 py-1 rounded bg-gray-600">Idle</div>
+                </div>
+                <div id="chat-container" class="chat-container bg-gray-800 rounded-lg p-3 overflow-y-auto flex flex-col">
+                    <!-- Chat messages will be inserted here -->
+                </div>
+                <!-- Typing indicators -->
+                <div id="ai1-typing" class="typing-indicator-container">
+                    <div class="typing-indicator ai1">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div id="ai2-typing" class="typing-indicator-container">
+                    <div class="typing-indicator ai2">
+                        <span></span>
+                        <span></span>
+                        <span></span>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+</main>
 
     <footer class="bg-gray-800 py-2 px-3">
         <div class="container mx-auto text-center text-sm opacity-75">
@@ -446,5 +506,41 @@ require_once 'includes/config.php';
     <script src="assets/js/api.js"></script>
     <script src="assets/js/conversation.js"></script>
     <script src="assets/js/app.js"></script>
+    <script>
+// Fix for settings panel opening/closing
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle settings panel via the top button
+    document.getElementById('toggle-settings').addEventListener('click', function() {
+        const settingsPanel = document.getElementById('settings-panel');
+        if (settingsPanel) {
+            settingsPanel.classList.toggle('open');
+        }
+    });
+
+    // Close settings panel via the Close button
+    document.getElementById('close-settings').addEventListener('click', function() {
+        const settingsPanel = document.getElementById('settings-panel');
+        if (settingsPanel) {
+            settingsPanel.classList.remove('open');
+        }
+    });
+
+    // Make sure the settings panel CSS includes the display styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .settings-panel {
+            display: none;
+        }
+        .settings-panel.open {
+            display: block;
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+
 </body>
+
+
+
 </html>

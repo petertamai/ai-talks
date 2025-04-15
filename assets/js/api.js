@@ -200,10 +200,13 @@ function addFallbackModels() {
 }
 
 // Get AI response from OpenRouter
-async function getAIResponse(aiId, prompt) {
+/**
+ * Update the getAIResponse function to include temperature and max_tokens parameters
+ */
+async function getAIResponse(aiId, prompt, modelId = null, temperature = 0.5, maxTokens = 1200) {
     try {
         // Get model and system prompt
-        const model = $(`#${aiId}-model`).val();
+        const model = modelId || $(`#${aiId}-model`).val();
         const systemPrompt = $(`#${aiId}-prompt`).val();
         const aiName = $(`#${aiId}-name`).val() || (aiId === 'ai1' ? 'AI-1' : 'AI-2');
         
@@ -212,6 +215,7 @@ async function getAIResponse(aiId, prompt) {
         const otherAiName = $(`#${otherAiId}-name`).val() || (otherAiId === 'ai1' ? 'AI-1' : 'AI-2');
         
         debugLog(`Getting ${aiId} (${aiName}) response using model: ${model}`);
+        debugLog(`Temperature: ${temperature}, Max Tokens: ${maxTokens}`);
         debugLog(`Prompt: ${prompt.substring(0, 50)}...`);
         
         // Create messages array with system prompt that identifies the AIs by name
@@ -265,8 +269,8 @@ async function getAIResponse(aiId, prompt) {
             body: JSON.stringify({
                 model: model,
                 messages: messages,
-                max_tokens: 150, // Limit response length for quicker exchanges
-                temperature: 0.7 // Add some randomness for more engaging conversation
+                max_tokens: maxTokens,
+                temperature: temperature
             })
         });
         

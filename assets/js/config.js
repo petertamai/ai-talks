@@ -53,6 +53,14 @@ $(document).ready(function() {
 
 // Set up UI event listeners
 function setupEventListeners() {
+    $('#toggle-settings').click(function() {
+        $('#settings-panel').toggleClass('open');
+    });
+    
+    // Close settings panel with the close button
+    $('#close-settings').click(function() {
+        $('#settings-panel').removeClass('open');
+    });
     // Toggle settings panel
     $('#toggle-settings').click(function() {
         $('#settings-panel').toggleClass('open');
