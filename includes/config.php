@@ -8,21 +8,42 @@
 
 // Enable error reporting for development (disable in production)
 ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Session handling for cookies
+session_start();
+
+// Get API keys from cookies if available
+function getOpenRouterKey() {
+    if (isset($_COOKIE['openrouter_api_key']) && !empty($_COOKIE['openrouter_api_key'])) {
+        return $_COOKIE['openrouter_api_key'];
+    }
+    return '';
+}
+
+function getGroqKey() {
+    if (isset($_COOKIE['groq_api_key']) && !empty($_COOKIE['groq_api_key'])) {
+        return $_COOKIE['groq_api_key'];
+    }
+    return '';
+}
+
 // Define API endpoints
-define('LITELLM_API_URL', 'https://backend-litellm-app.jml2s5.easypanel.host/');
+define('OPENROUTER_API_URL', 'https://openrouter.ai/api/v1/');
 define('GROQ_API_URL', 'https://api.groq.com/openai/v1/');
 
-// API keys - in production, these should be stored securely as environment variables
-// or in a separate .env file that is not committed to version control
-define('GROQ_API_KEY', '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');  // Replace with your actual key
-define('LITELLM_API_KEY', 'sk-HlQd84qHqCwOKUvPmXVq9g');  // Replace with your actual key
+// Set keys from cookies or fallback to environment variables
+define('OPENROUTER_API_KEY', getOpenRouterKey() ?: getenv('OPENROUTER_API_KEY') ?: '');
+define('GROQ_API_KEY', getGroqKey() ?: getenv('GROQ_API_KEY') ?: '');
 
 // Logging settings
 define('LOG_ENABLED', true);
 define('LOG_FILE', __DIR__ . '/../logs/app.log');
+
+// Create logs directory if it doesn't exist
+if (!is_dir(__DIR__ . '/../logs')) {
+    mkdir(__DIR__ . '/../logs', 0755, true);
+}
 
 /**
  * Custom error logger
@@ -33,12 +54,6 @@ define('LOG_FILE', __DIR__ . '/../logs/app.log');
  */
 function app_log($message, $level = 'INFO') {
     if (!LOG_ENABLED) return;
-    
-    // Create logs directory if it doesn't exist
-    $logDir = dirname(LOG_FILE);
-    if (!is_dir($logDir)) {
-        mkdir($logDir, 0755, true);
-    }
     
     $timestamp = date('Y-m-d H:i:s');
     $logMessage = "[$timestamp] [$level] $message" . PHP_EOL;
