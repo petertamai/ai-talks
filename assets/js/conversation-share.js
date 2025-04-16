@@ -379,6 +379,10 @@ class ConversationShare {
             console.log(`Checking audio for conversation: ${this.conversationId}`);
             
             const response = await fetch(`api/check-audio-recordings.php?conversation_id=${this.conversationId}`);
+            if (!response.ok) {
+                throw new Error(`Failed to check audio status: ${response.status}`);
+            }
+            
             const data = await response.json();
             
             console.log('Audio check result:', data);
@@ -387,8 +391,23 @@ class ConversationShare {
                 this.showPlayButton(true);
                 return true;
             } else {
-                this.showPlayButton(false);
-                return false;
+                // Do a more thorough check - enumerate the audio directory directly
+                // This is needed because sometimes the flag in shared_conversations.json isn't updated
+                const audioPath = `conversations/${this.conversationId}/audio`;
+                console.log(`Double-checking audio directory: ${audioPath}`);
+                
+                // See if any MP3 files exist in that directory
+                const directCheck = await this.checkAudioDirectoryContents();
+                
+                if (directCheck) {
+                    // We found audio files! Update the UI
+                    this.showPlayButton(true);
+                    return true;
+                } else {
+                    console.log('No audio files found after directory check');
+                    this.showPlayButton(false);
+                    return false;
+                }
             }
         } catch (error) {
             console.error('Error checking for audio recordings:', error);
@@ -396,7 +415,22 @@ class ConversationShare {
             return false;
         }
     }
-    
+    // Add this new helper method to the ConversationShare class
+async checkAudioDirectoryContents() {
+    try {
+        // We'll do a simple AJAX request to a PHP endpoint that will check the directory contents
+        const response = await fetch(`api/check-audio-recordings.php?conversation_id=${this.conversationId}&force_scan=true`);
+        if (!response.ok) {
+            return false;
+        }
+        
+        const data = await response.json();
+        return data && data.hasAudio === true;
+    } catch (error) {
+        console.error('Error in direct audio directory check:', error);
+        return false;
+    }
+}
     async togglePlayConversation() {
         const playButton = document.getElementById('play-conversation-btn');
         

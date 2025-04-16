@@ -317,6 +317,7 @@ function calculateSpeakingTime(text) {
 }
 
 // Speak text using Groq TTS if enabled
+// Speak text using Groq TTS if enabled
 async function speakText(aiId, text) {
     // Check if TTS is enabled for this AI
     const ttsEnabled = $(`#${aiId}-tts-enabled`).is(':checked');
@@ -333,7 +334,16 @@ async function speakText(aiId, text) {
             throw new Error('Voice parameter is empty');
         }
         
-        debugLog(`Speaking with ${aiId} using voice: ${voice}`);
+        // Get the conversation ID from localStorage (used for sharing)
+        const conversationId = localStorage.getItem('currentConversationId') || 
+            ('conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+        
+        // If no conversation ID exists, create and store one
+        if (!localStorage.getItem('currentConversationId')) {
+            localStorage.setItem('currentConversationId', conversationId);
+        }
+        
+        debugLog(`Speaking with ${aiId} using voice: ${voice}, conversation: ${conversationId}`);
         
         // Calculate speaking time for fallback
         const speakingTime = calculateSpeakingTime(text);
@@ -347,6 +357,11 @@ async function speakText(aiId, text) {
             throw new Error('Text parameter is empty');
         }
         
+        // Get the current message index (count of all messages)
+        const messageIndex = document.querySelectorAll('.chat-message').length - 1;
+        
+        debugLog(`TTS for conversation: ${conversationId}, message: ${messageIndex}, agent: ${aiId}`);
+        
         // Send request to our PHP proxy
         const response = await fetch('api/groq-tts-proxy.php', {
             method: 'POST',
@@ -355,7 +370,10 @@ async function speakText(aiId, text) {
             },
             body: JSON.stringify({
                 voice: voice,
-                input: text
+                input: text,
+                conversation_id: conversationId,
+                message_index: messageIndex,
+                agent: aiId
             })
         });
         
@@ -392,6 +410,18 @@ async function speakText(aiId, text) {
                 debugLog(`Audio finished playing for ${aiId}`);
                 updateSpeakingState(aiId, false);
                 URL.revokeObjectURL(audioUrl);
+                
+                // Update the play button visibility after TTS completes
+                if (window.conversationShare) {
+                    window.conversationShare.showShareButton(true);
+                    // Force a check for audio files
+                    window.conversationShare.updatePlayButtonVisibility().then(hasAudio => {
+                        if (hasAudio) {
+                            window.conversationShare.showPlayButton(true);
+                        }
+                    });
+                }
+                
                 resolve();
             };
             

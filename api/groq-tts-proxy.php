@@ -1,6 +1,6 @@
 <?php
 /**
- * Groq Text-to-Speech API Proxy
+ * Groq Text-to-Speech API Proxy - Fixed Version
  * 
  * Acts as a proxy between the client and Groq TTS API.
  * Also saves audio files for sharing.
@@ -138,55 +138,78 @@ try {
             if ($conversationId) {
                 logTts("Saving audio for conversation: $conversationId, message: $messageIndex, agent: $agent");
                 
-                // Create base directories path 
-                $basePath = __DIR__ . '/../conversations';
-                if (!file_exists($basePath)) {
-                    if (!@mkdir($basePath, 0755, true)) {
-                        logTts("CRITICAL ERROR: Failed to create base conversations directory: $basePath");
-                        logTts("Current directory: " . __DIR__);
-                        logTts("Directory permissions: " . substr(sprintf('%o', fileperms(__DIR__)), -4));
+                // Create base directories path - Full server path 
+                $basePath = realpath(__DIR__ . '/../conversations');
+                if (!$basePath) {
+                    $basePath = __DIR__ . '/../conversations';
+                    if (!file_exists($basePath)) {
+                        logTts("Creating base conversations directory: $basePath");
+                        if (!@mkdir($basePath, 0755, true)) {
+                            logTts("CRITICAL ERROR: Failed to create base conversations directory: $basePath");
+                            logTts("Current directory: " . __DIR__);
+                            logTts("Directory permissions: " . substr(sprintf('%o', fileperms(__DIR__)), -4));
+                        }
                     }
                 }
                 
-                // Create directories if they don't exist
+                // Create directories if they don't exist with full error reporting
                 $conversationDir = $basePath . "/{$conversationId}";
                 $audioDir = "{$conversationDir}/audio";
                 
-                // Ensure directories exist with proper permissions
+                // Ensure conversation directory exists
                 if (!file_exists($conversationDir)) {
                     logTts("Creating conversation directory: $conversationDir");
                     if (!@mkdir($conversationDir, 0755, true)) {
-                        logTts("ERROR: Failed to create conversation directory: $conversationDir");
-                        throw new Exception("Failed to create conversation directory");
+                        $error = error_get_last();
+                        logTts("ERROR: Failed to create conversation directory: $conversationDir - " . 
+                              ($error ? $error['message'] : "Unknown error"));
+                        throw new Exception("Failed to create conversation directory: " . 
+                                           ($error ? $error['message'] : "Unknown error"));
                     }
                 }
                 
+                // Ensure audio directory exists
                 if (!file_exists($audioDir)) {
                     logTts("Creating audio directory: $audioDir");
                     if (!@mkdir($audioDir, 0755, true)) {
-                        logTts("ERROR: Failed to create audio directory: $audioDir");
-                        throw new Exception("Failed to create audio directory");
+                        $error = error_get_last();
+                        logTts("ERROR: Failed to create audio directory: $audioDir - " . 
+                              ($error ? $error['message'] : "Unknown error"));
+                        throw new Exception("Failed to create audio directory: " . 
+                                           ($error ? $error['message'] : "Unknown error"));
                     }
                 }
                 
-                // Ensure directory is writable
+                // Ensure directory is writable with detailed error logging
                 if (!is_writable($audioDir)) {
                     logTts("ERROR: Audio directory is not writable: $audioDir");
+                    
+                    // Try to fix permissions
                     @chmod($audioDir, 0755);
                     if (!is_writable($audioDir)) {
-                        throw new Exception("Audio directory is not writable");
+                        @chmod($audioDir, 0777); // Last resort
+                        if (!is_writable($audioDir)) {
+                            logTts("CRITICAL: Unable to make audio directory writable even after chmod: $audioDir");
+                            logTts("Owner: " . posix_getpwuid(fileowner($audioDir))['name'] . ", Group: " . 
+                                  posix_getgrgid(filegroup($audioDir))['name']);
+                            throw new Exception("Audio directory is not writable and couldn't be fixed with chmod");
+                        } else {
+                            logTts("Fixed permissions with chmod 777: $audioDir");
+                        }
+                    } else {
+                        logTts("Fixed permissions with chmod 755: $audioDir");
                     }
                 }
                 
-                // Save audio file
-                $audioFilePath = "{$audioDir}/message_{$messageIndex}.mp3";
-                logTts("Saving to: $audioFilePath");
-                
-                // Verify we have audio content to save
+                // Verify audio content before saving
                 if (empty($response) || strlen($response) < 100) {
                     logTts("ERROR: Response content too small or empty: " . strlen($response) . " bytes");
                     throw new Exception("Received empty or invalid audio content from API");
                 }
+                
+                // Save audio file with full path
+                $audioFilePath = "{$audioDir}/message_{$messageIndex}.mp3";
+                logTts("Saving to: $audioFilePath");
                 
                 // Write file with error handling
                 $result = @file_put_contents($audioFilePath, $response);
@@ -205,6 +228,9 @@ try {
                         logTts("ERROR: File saved but is empty: $audioFilePath");
                     } else {
                         logTts("File saved and verified: $audioFilePath, size: " . filesize($audioFilePath) . " bytes");
+                        
+                        // Update shared_conversations.json to indicate this conversation has audio
+                        updateSharedConversationAudio($conversationId);
                     }
                 }
             } else {
@@ -250,3 +276,48 @@ try {
 
 // Log end of request
 logTts("Request processing completed");
+
+/**
+ * Update the shared_conversations.json file to indicate a conversation has audio
+ * 
+ * @param string $conversationId The ID of the conversation
+ * @return void
+ */
+function updateSharedConversationAudio($conversationId) {
+    try {
+        $dataDir = __DIR__ . '/../data';
+        $sharedConversationsFile = "$dataDir/shared_conversations.json";
+        
+        // Create data directory if it doesn't exist
+        if (!file_exists($dataDir)) {
+            if (!@mkdir($dataDir, 0755, true)) {
+                logTts("ERROR: Failed to create data directory: $dataDir");
+                return;
+            }
+        }
+        
+        // Initialize shared conversations array
+        $sharedConversations = [];
+        
+        // If the file exists, read it
+        if (file_exists($sharedConversationsFile)) {
+            $fileContent = file_get_contents($sharedConversationsFile);
+            if (!empty($fileContent)) {
+                $sharedConversations = json_decode($fileContent, true) ?: [];
+            }
+        }
+        
+        // Update the has_audio flag for this conversation
+        if (isset($sharedConversations[$conversationId])) {
+            $sharedConversations[$conversationId]['has_audio'] = true;
+            
+            // Save the updated shared conversations tracker
+            file_put_contents($sharedConversationsFile, json_encode($sharedConversations, JSON_PRETTY_PRINT));
+            logTts("Updated shared_conversations.json - set has_audio=true for $conversationId");
+        } else {
+            logTts("Conversation $conversationId not found in shared_conversations.json");
+        }
+    } catch (Exception $e) {
+        logTts("Error updating shared_conversations.json: " . $e->getMessage());
+    }
+}

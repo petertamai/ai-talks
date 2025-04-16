@@ -57,6 +57,21 @@ if (empty($conversationId)) {
         } else {
             // Load conversation data
             $conversationData = json_decode(file_get_contents($conversationFile), true);
+            
+            // Double-check for audio files directly
+            $audioPath = "conversations/$conversationId/audio";
+            if (file_exists($audioPath)) {
+                $audioFiles = glob("$audioPath/*.mp3");
+                if (!empty($audioFiles)) {
+                    $hasAudio = true;
+                    
+                    // Update shared_conversations.json if necessary
+                    if (isset($sharedConversations[$conversationId]) && !$sharedConversations[$conversationId]['has_audio']) {
+                        $sharedConversations[$conversationId]['has_audio'] = true;
+                        file_put_contents($sharedConversationsFile, json_encode($sharedConversations, JSON_PRETTY_PRINT));
+                    }
+                }
+            }
         }
     }
 }
@@ -69,6 +84,7 @@ if (empty($conversationId)) {
     <title>Shared Conversation - AI Conversation System</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
+    <link href="assets/css/conversation-share.css" rel="stylesheet">
     <style>
         :root {
             --bg-color: #4D4D4D;
@@ -193,92 +209,110 @@ if (empty($conversationId)) {
         <?php elseif ($conversationData): ?>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Sidebar with conversation settings -->
-                <div class="bg-gray-700 rounded-lg p-3">
-                    <h2 class="text-xl font-bold mb-3">Conversation Settings</h2>
-                    
-                    <?php if (isset($conversationData['settings'])): ?>
-                        <div class="mb-3">
-                            <h3 class="text-lg font-semibold">Message Direction</h3>
-                            <p class="text-sm opacity-80"><?php echo htmlspecialchars($conversationData['settings']['messageDirection'] ?? 'N/A'); ?></p>
-                        </div>
+                <div class="md:col-span-1 sidebar">
+                    <div class="bg-gray-700 rounded-lg p-3">
+                        <h2 class="text-xl font-bold mb-3">Conversation Settings</h2>
                         
-                        <div class="mb-3">
-                            <h3 class="text-lg font-semibold">Models</h3>
-                            <ul class="text-sm opacity-80 list-disc pl-5">
-                                <?php if (isset($conversationData['settings']['models'])): ?>
-                                    <?php foreach ($conversationData['settings']['models'] as $key => $value): ?>
-                                        <li><strong><?php echo htmlspecialchars($key); ?>:</strong> <?php echo htmlspecialchars($value); ?></li>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </ul>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <h3 class="text-lg font-semibold">Agent Names</h3>
-                            <ul class="text-sm opacity-80 list-disc pl-5">
-                                <?php if (isset($conversationData['settings']['names'])): ?>
-                                    <?php foreach ($conversationData['settings']['names'] as $key => $value): ?>
-                                        <li><strong><?php echo htmlspecialchars($key); ?>:</strong> <?php echo htmlspecialchars($value); ?></li>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </ul>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <h3 class="text-lg font-semibold">Prompts</h3>
-                            <?php if (isset($conversationData['settings']['prompts'])): ?>
-                                <?php foreach ($conversationData['settings']['prompts'] as $key => $value): ?>
-                                    <div class="mb-2">
-                                        <p class="font-medium"><?php echo htmlspecialchars($key); ?>:</p>
-                                        <div class="bg-gray-800 p-2 rounded text-xs overflow-auto max-h-20">
-                                            <?php echo nl2br(htmlspecialchars($value)); ?>
+                        <?php if (isset($conversationData['settings'])): ?>
+                            <div class="mb-3">
+                                <h3 class="text-lg font-semibold">Message Direction</h3>
+                                <p class="text-sm opacity-80"><?php echo htmlspecialchars($conversationData['settings']['messageDirection'] ?? 'N/A'); ?></p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h3 class="text-lg font-semibold">Models</h3>
+                                <ul class="text-sm opacity-80 list-disc pl-5">
+                                    <?php if (isset($conversationData['settings']['models'])): ?>
+                                        <?php foreach ($conversationData['settings']['models'] as $key => $value): ?>
+                                            <li><strong><?php echo htmlspecialchars($key); ?>:</strong> <?php echo htmlspecialchars($value); ?></li>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h3 class="text-lg font-semibold">Agent Names</h3>
+                                <ul class="text-sm opacity-80 list-disc pl-5">
+                                    <?php if (isset($conversationData['settings']['names'])): ?>
+                                        <?php foreach ($conversationData['settings']['names'] as $key => $value): ?>
+                                            <li><strong><?php echo htmlspecialchars($key); ?>:</strong> <?php echo htmlspecialchars($value); ?></li>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h3 class="text-lg font-semibold">Prompts</h3>
+                                <?php if (isset($conversationData['settings']['prompts'])): ?>
+                                    <?php foreach ($conversationData['settings']['prompts'] as $key => $value): ?>
+                                        <div class="mb-2">
+                                            <p class="font-medium"><?php echo htmlspecialchars($key); ?>:</p>
+                                            <div class="bg-gray-800 p-2 rounded text-xs overflow-auto max-h-20 prompt-content">
+                                                <?php echo nl2br(htmlspecialchars($value)); ?>
+                                            </div>
+                                            <button class="text-xs mt-1 underline show-full-prompt">Show full prompt</button>
+                                            <div class="hidden full-prompt bg-gray-800 p-2 rounded text-xs overflow-auto mt-1">
+                                                <?php echo nl2br(htmlspecialchars($value)); ?>
+                                            </div>
                                         </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-                    <?php else: ?>
-                        <p class="text-gray-400">No settings information available</p>
-                    <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="text-gray-400">No settings information available</p>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 
                 <!-- Main conversation content -->
                 <div class="md:col-span-2">
-                    <div class="bg-gray-700 rounded-lg p-3 h-full flex flex-col">
-                        <div class="flex items-center justify-between mb-3">
+                    <div class="conversation-container">
+                        <div class="conversation-header">
                             <h2 class="text-xl font-bold">Shared Conversation</h2>
                             
-                            <?php if ($hasAudio): ?>
-                                <button id="play-conversation-btn" class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Play
-                                </button>
-                            <?php endif; ?>
+                            <div class="conversation-action-buttons">
+                                <?php if ($hasAudio): ?>
+                                    <button id="play-conversation-btn" class="btn-play">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Play
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         
-                        <div id="chat-container" class="chat-container bg-gray-800 rounded-lg p-3 overflow-y-auto flex flex-col" style="min-height: 500px; max-height: 70vh;">
+                        <div class="conversation-messages">
                             <?php if (isset($conversationData['messages']) && is_array($conversationData['messages'])): ?>
                                 <?php foreach ($conversationData['messages'] as $index => $message): ?>
                                     <?php
-                                    $messageClass = 'human';
+                                    $messageClass = 'message message-human';
                                     $agentName = 'Human';
                                     
-                                    if ($message['role'] === 'assistant') {
+                                    if (isset($message['role']) && $message['role'] === 'assistant') {
                                         if (isset($message['agent']) && $message['agent'] === 'ai2') {
-                                            $messageClass = 'ai2';
+                                            $messageClass = 'message message-ai';
                                             $agentName = $conversationData['settings']['names']['ai2'] ?? 'AI-2';
                                         } else {
-                                            $messageClass = 'ai1';
+                                            $messageClass = 'message message-ai';
                                             $agentName = $conversationData['settings']['names']['ai1'] ?? 'AI-1';
                                         }
                                     }
+                                    
+                                    // Skip [object Object] messages
+                                    if ($message['content'] === '[object Object]') {
+                                        continue;
+                                    }
                                     ?>
-                                    <div class="chat-message <?php echo $messageClass; ?>">
-                                        <div class="agent-name"><?php echo htmlspecialchars($agentName); ?></div>
-                                        <div class="message-text"><?php echo nl2br(htmlspecialchars($message['content'])); ?></div>
+                                    <div class="<?php echo $messageClass; ?>" data-index="<?php echo $index; ?>">
+                                        <div class="message-header">
+                                            <strong><?php echo htmlspecialchars($agentName); ?></strong>
+                                            <?php if (isset($message['timestamp'])): ?>
+                                                <span class="text-muted"><?php echo date('H:i', strtotime($message['timestamp'])); ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="message-content"><?php echo nl2br(htmlspecialchars($message['content'])); ?></div>
                                         <?php if (isset($message['model']) && !empty($message['model'])): ?>
                                             <div class="model-badge"><?php echo htmlspecialchars($message['model']); ?></div>
                                         <?php endif; ?>
@@ -308,9 +342,28 @@ if (empty($conversationId)) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
     
-    <?php if ($hasAudio): ?>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Show full prompts
+        const showPromptButtons = document.querySelectorAll('.show-full-prompt');
+        showPromptButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const promptContent = this.previousElementSibling;
+                const fullPrompt = this.nextElementSibling;
+                
+                if (fullPrompt.classList.contains('hidden')) {
+                    promptContent.classList.add('hidden');
+                    fullPrompt.classList.remove('hidden');
+                    this.textContent = 'Show less';
+                } else {
+                    promptContent.classList.remove('hidden');
+                    fullPrompt.classList.add('hidden');
+                    this.textContent = 'Show full prompt';
+                }
+            });
+        });
+        
+        <?php if ($hasAudio): ?>
         // Audio playback functionality
         const conversationId = '<?php echo $conversationId; ?>';
         const playButton = document.getElementById('play-conversation-btn');
@@ -323,13 +376,24 @@ if (empty($conversationId)) {
         // Load audio files
         async function loadAudioFiles() {
             try {
+                console.log('Attempting to load audio files for conversation:', conversationId);
                 const response = await fetch(`api/get-conversation-audio.php?conversation_id=${conversationId}`);
-                const data = await response.json();
                 
-                if (data.success && data.audioFiles.length > 0) {
+                if (!response.ok) {
+                    console.error('Error loading audio files. Status:', response.status);
+                    return false;
+                }
+                
+                const data = await response.json();
+                console.log('Audio files data:', data);
+                
+                if (data.success && data.audioFiles && data.audioFiles.length > 0) {
                     audioQueue = data.audioFiles;
+                    console.log(`Loaded ${audioQueue.length} audio files:`, audioQueue);
                     return true;
                 }
+                
+                console.log('No audio files found in response');
                 return false;
             } catch (error) {
                 console.error('Error loading audio files:', error);
@@ -338,50 +402,79 @@ if (empty($conversationId)) {
         }
         
         // Play/Stop toggle
-        playButton.addEventListener('click', async function() {
-            if (isPlaying) {
-                // Stop playing
-                audioPlayer.pause();
-                isPlaying = false;
-                playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Play';
+        if (playButton) {
+            playButton.addEventListener('click', async function() {
+                console.log('Play button clicked, current state:', isPlaying);
                 
-                // Remove highlights
-                document.querySelectorAll('.chat-message.speaking').forEach(el => {
-                    el.classList.remove('speaking');
-                });
-            } else {
-                // Start playing
-                if (audioQueue.length === 0) {
-                    const hasAudio = await loadAudioFiles();
-                    if (!hasAudio) {
-                        Swal.fire({
-                            title: 'No Audio Available',
-                            text: 'There are no audio recordings available for this conversation.',
-                            icon: 'info'
-                        });
-                        return;
+                if (isPlaying) {
+                    // Stop playing
+                    audioPlayer.pause();
+                    isPlaying = false;
+                    playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Play';
+                    
+                    // Remove highlights
+                    document.querySelectorAll('.message.highlighted').forEach(el => {
+                        el.classList.remove('highlighted');
+                    });
+                } else {
+                    // Start playing
+                    if (audioQueue.length === 0) {
+                        console.log('No audio files in queue, loading...');
+                        const hasAudio = await loadAudioFiles();
+                        
+                        if (!hasAudio) {
+                            console.error('No audio files available');
+                            Swal.fire({
+                                title: 'No Audio Available',
+                                text: 'There are no audio recordings available for this conversation.',
+                                icon: 'info'
+                            });
+                            return;
+                        }
                     }
+                    
+                    console.log('Starting audio playback');
+                    currentAudioIndex = 0;
+                    playCurrentAudio();
+                    isPlaying = true;
+                    playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Stop';
                 }
-                
-                currentAudioIndex = 0;
-                playCurrentAudio();
-                isPlaying = true;
-                playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Stop';
-            }
-        });
+            });
+        }
         
         // Play current audio file
         function playCurrentAudio() {
             if (currentAudioIndex < audioQueue.length) {
                 const audioFile = audioQueue[currentAudioIndex];
-                audioPlayer.src = `conversations/${conversationId}/audio/${audioFile}`;
-                audioPlayer.onended = playNextAudio;
-                audioPlayer.play();
+                console.log(`Playing audio file (${currentAudioIndex + 1}/${audioQueue.length}):`, audioFile);
                 
-                // Highlight corresponding message
+                audioPlayer.src = `conversations/${conversationId}/audio/${audioFile}`;
+                
+                audioPlayer.onended = () => {
+                    console.log('Audio playback ended, moving to next file');
+                    playNextAudio();
+                };
+                
+                audioPlayer.onerror = (e) => {
+                    console.error('Audio playback error:', e);
+                    console.log('Skipping to next audio file due to error');
+                    playNextAudio(); // Skip to next on error
+                };
+                
+                // Try to play the audio
+                audioPlayer.play().then(() => {
+                    console.log('Audio playback started successfully');
+                }).catch(err => {
+                    console.error('Failed to play audio:', err);
+                    console.log('Skipping to next audio file due to playback failure');
+                    playNextAudio(); // Skip to next on error
+                });
+                
+                // Highlight the corresponding message
                 highlightCurrentMessage(audioFile);
             } else {
                 // End of queue
+                console.log('Reached end of audio queue');
                 resetPlayState();
             }
         }
@@ -389,46 +482,77 @@ if (empty($conversationId)) {
         // Play next audio file
         function playNextAudio() {
             currentAudioIndex++;
+            console.log(`Moving to audio file index: ${currentAudioIndex}`);
+            
             if (currentAudioIndex < audioQueue.length) {
                 playCurrentAudio();
             } else {
+                console.log('No more audio files to play');
                 resetPlayState();
             }
         }
         
         // Reset play state
         function resetPlayState() {
+            console.log('Resetting playback state');
             isPlaying = false;
             currentAudioIndex = 0;
-            playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Play';
+            
+            if (playButton) {
+                playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Play';
+            }
             
             // Remove highlights
-            document.querySelectorAll('.chat-message.speaking').forEach(el => {
-                el.classList.remove('speaking');
+            document.querySelectorAll('.message.highlighted').forEach(el => {
+                el.classList.remove('highlighted');
             });
         }
         
         // Highlight message currently being played
         function highlightCurrentMessage(audioFile) {
+            console.log('Highlighting message for audio file:', audioFile);
+            
             // Remove previous highlights
-            document.querySelectorAll('.chat-message.speaking').forEach(el => {
-                el.classList.remove('speaking');
+            document.querySelectorAll('.message.highlighted').forEach(el => {
+                el.classList.remove('highlighted');
             });
             
             // Extract index from filename
             let indexMatch = audioFile.match(/_([\d]+)/);
             if (indexMatch && indexMatch[1]) {
                 const messageIndex = parseInt(indexMatch[1]);
-                const messages = document.querySelectorAll('.chat-message');
+                console.log('Extracted message index:', messageIndex);
+                
+                const messages = document.querySelectorAll('.message');
                 
                 if (messageIndex < messages.length) {
-                    messages[messageIndex].classList.add('speaking');
+                    console.log('Highlighting message at index:', messageIndex);
+                    messages[messageIndex].classList.add('highlighted');
                     messages[messageIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    console.log('Message index out of range:', messageIndex, 'total messages:', messages.length);
                 }
+            } else {
+                console.log('Could not extract message index from filename:', audioFile);
             }
         }
+        
+        // Preload audio files when page loads
+        loadAudioFiles().then(hasAudio => {
+            if (hasAudio) {
+                console.log('Audio files loaded successfully');
+            } else {
+                console.log('No audio files available for this conversation');
+                
+                // Double-check by scanning directory directly
+                if (playButton && !hasAudio) {
+                    console.log('Hiding play button due to no audio files');
+                    playButton.style.display = 'none';
+                }
+            }
+        });
+        <?php endif; ?>
     });
     </script>
-    <?php endif; ?>
 </body>
 </html>

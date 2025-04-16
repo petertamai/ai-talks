@@ -202,176 +202,158 @@ class SpeechHandler {
         }
     }
 
-/**
- * Speak text using Groq's Text-to-Speech API
- * @param {string} aiId - The ID of the AI agent that's speaking
- * @param {string} text - The text to speak
- * @param {string} voice - The voice to use
- * @param {function} callback - Function to call when speech is finished
- */
-async speakText(aiId, text, voice, callback) {
-    try {
-        console.log(`Speaking with ${aiId}, voice: ${voice}, text: "${text.substring(0, 50)}..."`);
-        
-        // Update UI to show speaking state
-        this.updateSpeakingState(aiId, true);
-        
-        // Verify parameters
-        if (!voice || voice.trim() === '') {
-            throw new Error('Voice parameter is empty');
+    /**
+     * Speak text using Groq's Text-to-Speech API
+     * @param {string} aiId - The ID of the AI agent that's speaking
+     * @param {string} text - The text to speak
+     * @param {string} voice - The voice to use
+     * @param {function} callback - Function to call when speech is finished
+     */
+
+
+    async speakText(aiId, text) {
+        // Check if TTS is enabled for this AI
+        const ttsEnabled = $(`#${aiId}-tts-enabled`).is(':checked');
+        if (!ttsEnabled) {
+            debugLog(`TTS disabled for ${aiId}, skipping speech`);
+            return Promise.resolve(); // Resolve immediately
         }
         
-        if (!text || text.trim() === '') {
-            throw new Error('Text parameter is empty');
-        }
-        
-        // Get the conversation ID from localStorage (used for sharing)
-        const conversationId = localStorage.getItem('currentConversationId') || 
-            ('conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
-        
-        // If no conversation ID exists, create and store one
-        if (!localStorage.getItem('currentConversationId')) {
-            localStorage.setItem('currentConversationId', conversationId);
-        }
-        
-        console.log(`Using conversation ID: ${conversationId}`);
-        
-        // Get the current message index (count of all messages)
-        const messageIndex = document.querySelectorAll('.chat-message').length - 1;
-        
-        console.log(`TTS for conversation: ${conversationId}, message: ${messageIndex}, agent: ${aiId}`);
-        
-        // Debug the exact payload we're sending
-        const payload = {
-            voice: voice,
-            input: text,
-            conversation_id: conversationId,
-            message_index: messageIndex,
-            agent: aiId
-        };
-        
-        console.log('TTS API payload:', payload);
-        console.log('JSON payload:', JSON.stringify(payload));
-        
-        // Send request to our PHP proxy
-        console.log('Sending request to TTS proxy...');
-        const response = await fetch('api/groq-tts-proxy.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-        
-        console.log('TTS response status:', response.status);
-        console.log('TTS response type:', response.headers.get('Content-Type'));
-        
-        if (!response.ok) {
-            try {
-                const errorData = await response.json();
-                throw new Error(`Server error: ${errorData.error || response.status}`);
-            } catch (e) {
-                throw new Error(`Server error: ${response.status}`);
+        try {
+            const voice = $(`#${aiId}-voice`).val();
+            
+            // Double-check voice is valid
+            if (!voice || voice.trim() === '') {
+                throw new Error('Voice parameter is empty');
             }
-        }
-        
-        // Get response content type
-        const contentType = response.headers.get('Content-Type');
-        console.log('TTS response content type:', contentType);
-        
-        // Check if response is audio
-        if (contentType && contentType.includes('audio/')) {
+            
+            // Get the conversation ID from localStorage (used for sharing)
+            const conversationId = localStorage.getItem('currentConversationId') || 
+                ('conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+            
+            // If no conversation ID exists, create and store one
+            if (!localStorage.getItem('currentConversationId')) {
+                localStorage.setItem('currentConversationId', conversationId);
+            }
+            
+            debugLog(`Speaking with ${aiId} using voice: ${voice}, conversation: ${conversationId}`);
+            
+            // Calculate speaking time for fallback
+            const speakingTime = calculateSpeakingTime(text);
+            debugLog(`Calculated speaking time: ${speakingTime}ms for ${text.split(/\s+/).length} words`);
+            
+            // Update UI to show speaking state
+            updateSpeakingState(aiId, true);
+            
+            // Verify text
+            if (!text || text.trim() === '') {
+                throw new Error('Text parameter is empty');
+            }
+            
+            // Get the current message index (count of all messages)
+            const messageIndex = document.querySelectorAll('.chat-message').length - 1;
+            
+            debugLog(`TTS for conversation: ${conversationId}, message: ${messageIndex}, agent: ${aiId}`);
+            
+            // Send request to our PHP proxy
+            const response = await fetch('api/groq-tts-proxy.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    voice: voice,
+                    input: text,
+                    conversation_id: conversationId,
+                    message_index: messageIndex,
+                    agent: aiId
+                })
+            });
+            
+            debugLog(`TTS response status: ${response.status}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                debugLog(`TTS error response: ${errorText}`);
+                throw new Error(`TTS API error: ${response.status}`);
+            }
+            
             // Get audio blob from response
             const audioBlob = await response.blob();
-            console.log(`Audio blob received: ${audioBlob.size} bytes`);
+            debugLog(`Received audio blob: ${audioBlob.size} bytes`);
             
             // Create object URL for audio blob
             const audioUrl = URL.createObjectURL(audioBlob);
-            console.log('Audio URL created:', audioUrl);
             
-            // Verify audio element exists
-            if (!this.audioElements[aiId]) {
-                throw new Error(`Audio element for ${aiId} not found`);
-            }
-            
-            // Set audio source and play
-            const audioElement = this.audioElements[aiId];
-            audioElement.src = audioUrl;
-            
-            // Debug log the audio element state
-            console.log('Audio element details:', {
-                id: aiId,
-                src: audioElement.src,
-                paused: audioElement.paused,
-                duration: audioElement.duration,
-                readyState: audioElement.readyState
+            // Play the audio
+            return new Promise((resolve, reject) => {
+                const audioElement = audioElements[aiId];
+                
+                audioElement.src = audioUrl;
+                audioElement.onerror = (e) => {
+                    debugLog(`Audio error: ${e}`);
+                    updateSpeakingState(aiId, false);
+                    URL.revokeObjectURL(audioUrl);
+                    
+                    // Still wait for the calculated speaking time
+                    setTimeout(resolve, speakingTime);
+                };
+                
+                audioElement.onended = () => {
+                    debugLog(`Audio finished playing for ${aiId}`);
+                    updateSpeakingState(aiId, false);
+                    URL.revokeObjectURL(audioUrl);
+                    
+                    // Update the play button visibility after TTS completes
+                    if (window.conversationShare) {
+                        window.conversationShare.showShareButton(true);
+                        // Force a check for audio files
+                        window.conversationShare.updatePlayButtonVisibility().then(hasAudio => {
+                            if (hasAudio) {
+                                window.conversationShare.showPlayButton(true);
+                            }
+                        });
+                    }
+                    
+                    resolve();
+                };
+                
+                // Set a timer based on calculated speaking time as a fallback
+                setTimeout(() => {
+                    if (audioElement.paused || audioElement.ended) {
+                        // Audio already ended
+                        return;
+                    }
+                    
+                    debugLog(`Speaking timer expired for ${aiId} after ${speakingTime}ms`);
+                    updateSpeakingState(aiId, false);
+                    audioElement.pause();
+                    URL.revokeObjectURL(audioUrl);
+                    resolve();
+                }, speakingTime + 500); // Add a small buffer
+                
+                // Start playing audio
+                audioElement.play().catch(e => {
+                    debugLog(`Error playing audio: ${e.message}`);
+                    updateSpeakingState(aiId, false);
+                    
+                    // Wait for the calculated speaking time
+                    setTimeout(resolve, speakingTime);
+                });
             });
             
-            // Add event listeners
-            audioElement.oncanplay = () => {
-                console.log(`Audio for ${aiId} is ready to play`);
-                audioElement.play().catch(e => {
-                    console.error('Error playing audio:', e);
-                });
-            };
+        } catch (error) {
+            debugLog(`Error in speakText: ${error.message}`);
+            updateSpeakingState(aiId, false);
             
-            audioElement.onended = () => {
-                console.log(`Audio for ${aiId} finished playing`);
-                
-                // Update UI to show not speaking state
-                this.updateSpeakingState(aiId, false);
-                
-                // Show the play button in conversation header if audio exists
-                if (window.conversationShare) {
-                    window.conversationShare.showShareButton(true);
-                    window.conversationShare.showPlayButton(true);
-                    window.conversationShare.updatePlayButtonVisibility();
-                }
-                
-                // Call callback when speech is finished
-                callback();
-                
-                // Revoke object URL to free memory
-                URL.revokeObjectURL(audioUrl);
-            };
-            
-            audioElement.onerror = (e) => {
-                console.error(`Audio error for ${aiId}:`, e);
-                this.updateSpeakingState(aiId, false);
-                callback();
-            };
-            
-            // Try to play audio
-            try {
-                audioElement.load(); // Force reload
-                console.log(`Attempting to play audio for ${aiId}`);
-            } catch (e) {
-                console.error('Error loading audio:', e);
-                this.updateSpeakingState(aiId, false);
-                callback();
-            }
-        } else {
-            // If not audio, it's likely an error - try to parse as JSON
-            console.warn('Response is not audio, trying to parse as JSON');
-            try {
-                const errorData = await response.json();
-                throw new Error(`TTS API error: ${errorData.error || 'Unknown error'}`);
-            } catch (e) {
-                const responseText = await response.text();
-                throw new Error(`TTS API returned non-audio response: ${responseText.substring(0, 100)}`);
-            }
+            // Wait for a short time to simulate speech
+            return new Promise(resolve => {
+                setTimeout(resolve, 1000);
+            });
         }
-        
-    } catch (error) {
-        console.error('Error speaking text:', error);
-        
-        // Update UI to show not speaking state
-        this.updateSpeakingState(aiId, false);
-        
-        // Call callback on error
-        callback();
     }
-}
+
+    
     /**
      * Update UI to show speaking state
      * @param {string} aiId - The ID of the AI agent
@@ -380,22 +362,58 @@ async speakText(aiId, text, voice, callback) {
     updateSpeakingState(aiId, isSpeaking) {
         const chatContainer = document.getElementById(`${aiId}-chat`);
         const statusElement = document.getElementById(`${aiId}-status`);
+        const conversationStatus = document.getElementById('conversation-status');
         
-        if (!chatContainer || !statusElement) {
-            console.error(`Elements for ${aiId} not found`);
-            return;
+        // Fall back to global conversation status if specific elements not found
+        if (conversationStatus) {
+            if (isSpeaking) {
+                const aiName = $(`#${aiId}-name`).val() || aiId;
+                conversationStatus.textContent = `${aiName} is speaking`;
+                conversationStatus.className = 'text-sm px-2 py-1 rounded bg-green-700';
+            } else {
+                // Only set to Idle if the conversation is NOT active
+                if (!window.conversationActive) {
+                    conversationStatus.textContent = 'Idle';
+                    conversationStatus.className = 'text-sm px-2 py-1 rounded bg-gray-600';
+                }
+            }
         }
         
-        console.log(`Updating ${aiId} speaking state to: ${isSpeaking}`);
+        // Continue with specific elements if they exist
+        if (chatContainer && statusElement) {
+            console.log(`Updating ${aiId} speaking state to: ${isSpeaking}`);
+            
+            if (isSpeaking) {
+                chatContainer.classList.add('speaking');
+                statusElement.textContent = 'Speaking';
+                statusElement.className = 'text-sm px-2 py-1 rounded bg-green-700';
+            } else {
+                chatContainer.classList.remove('speaking');
+                statusElement.textContent = 'Idle';
+                statusElement.className = 'text-sm px-2 py-1 rounded bg-gray-600';
+            }
+        }
         
+        // Highlight the current message that's being spoken
         if (isSpeaking) {
-            chatContainer.classList.add('speaking');
-            statusElement.textContent = 'Speaking';
-            statusElement.className = 'text-sm px-2 py-1 rounded bg-green-700';
+            // Find the last message from this AI
+            const messages = document.querySelectorAll(`.chat-message.${aiId}`);
+            if (messages.length > 0) {
+                const lastMessage = messages[messages.length - 1];
+                
+                // Remove speaking class from all messages
+                document.querySelectorAll('.chat-message.speaking').forEach(el => {
+                    el.classList.remove('speaking');
+                });
+                
+                // Add speaking class to this message
+                lastMessage.classList.add('speaking');
+            }
         } else {
-            chatContainer.classList.remove('speaking');
-            statusElement.textContent = 'Idle';
-            statusElement.className = 'text-sm px-2 py-1 rounded bg-gray-600';
+            // Remove speaking class from all messages when done
+            document.querySelectorAll('.chat-message.speaking').forEach(el => {
+                el.classList.remove('speaking');
+            });
         }
     }
     
@@ -407,20 +425,34 @@ async speakText(aiId, text, voice, callback) {
     updateListeningState(aiId, isListening) {
         const chatContainer = document.getElementById(`${aiId}-chat`);
         const statusElement = document.getElementById(`${aiId}-status`);
+        const conversationStatus = document.getElementById('conversation-status');
         
-        if (!chatContainer || !statusElement) {
-            console.error(`Elements for ${aiId} not found`);
-            return;
+        // Fall back to global conversation status if specific elements not found
+        if (conversationStatus) {
+            if (isListening) {
+                const aiName = $(`#${aiId}-name`).val() || aiId;
+                conversationStatus.textContent = `${aiName} is listening`;
+                conversationStatus.className = 'text-sm px-2 py-1 rounded bg-blue-700';
+            } else {
+                // Only set to Idle if the conversation is NOT active
+                if (!window.conversationActive) {
+                    conversationStatus.textContent = 'Idle';
+                    conversationStatus.className = 'text-sm px-2 py-1 rounded bg-gray-600';
+                }
+            }
         }
         
-        console.log(`Updating ${aiId} listening state to: ${isListening}`);
-        
-        if (isListening) {
-            statusElement.textContent = 'Listening';
-            statusElement.className = 'text-sm px-2 py-1 rounded bg-blue-700';
-        } else {
-            statusElement.textContent = 'Idle';
-            statusElement.className = 'text-sm px-2 py-1 rounded bg-gray-600';
+        // Continue with specific elements if they exist
+        if (chatContainer && statusElement) {
+            console.log(`Updating ${aiId} listening state to: ${isListening}`);
+            
+            if (isListening) {
+                statusElement.textContent = 'Listening';
+                statusElement.className = 'text-sm px-2 py-1 rounded bg-blue-700';
+            } else {
+                statusElement.textContent = 'Idle';
+                statusElement.className = 'text-sm px-2 py-1 rounded bg-gray-600';
+            }
         }
     }
 }
