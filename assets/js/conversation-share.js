@@ -1,4 +1,5 @@
 /**
+ * conversation-share.js 
  * Conversation Share Functionality
  * 
  * Adds sharing functionality to the AI Conversation System
@@ -42,7 +43,16 @@ class ConversationShare {
         
         return id;
     }
-    
+    // Function to create proper share URL with clean URL format
+    createShareUrl(conversationId) {
+        const protocol = window.location.protocol;
+        const host = window.location.host;
+        const baseUrl = `${protocol}//${host}`;
+        const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        
+        // Generate the new URL format using /share/{conversationId}
+        return `${baseUrl}${path}share/${conversationId}`;
+    }
     resetConversationId() {
         // Generate a new conversation ID
         this.conversationId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -201,7 +211,7 @@ class ConversationShare {
             });
             
             // Call the API to save and share the conversation
-            const response = await fetch('api/share-conversation.php', {
+            const response = await fetch('api/share-conversation', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -215,14 +225,8 @@ class ConversationShare {
             const data = await response.json();
             
             if (data.success) {
-                // Generate share URL for index.php instead of share.php
-                const protocol = window.location.protocol;
-                const host = window.location.host;
-                const baseUrl = `${protocol}//${host}`;
-                const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-                
-                // Generate the new URL format - pointing to index.php with id parameter
-                const shareUrl = `${baseUrl}${path}index.php?id=${this.conversationId}`;
+                // Generate share URL for index instead of share
+                const shareUrl = this.createShareUrl(this.conversationId);
                 
                 // Show success message with copyable link
                 Swal.fire({
@@ -379,7 +383,7 @@ collectConversationData() {
     async hasAudioRecordings() {
         try {
             console.log(`Checking for audio recordings for conversation: ${this.conversationId}`);
-            const response = await fetch(`api/check-audio-recordings.php?conversation_id=${this.conversationId}`);
+            const response = await fetch(`api/check-audio-recordings?conversation_id=${this.conversationId}`);
             
             if (!response.ok) {
                 console.error(`Error checking for audio recordings: ${response.status}`);
@@ -400,7 +404,7 @@ collectConversationData() {
         try {
             console.log(`Checking audio for conversation: ${this.conversationId}`);
             
-            const response = await fetch(`api/check-audio-recordings.php?conversation_id=${this.conversationId}`);
+            const response = await fetch(`api/check-audio-recordings?conversation_id=${this.conversationId}`);
             if (!response.ok) {
                 throw new Error(`Failed to check audio status: ${response.status}`);
             }
@@ -441,7 +445,7 @@ collectConversationData() {
 async checkAudioDirectoryContents() {
     try {
         // We'll do a simple AJAX request to a PHP endpoint that will check the directory contents
-        const response = await fetch(`api/check-audio-recordings.php?conversation_id=${this.conversationId}&force_scan=true`);
+        const response = await fetch(`api/check-audio-recordings?conversation_id=${this.conversationId}&force_scan=true`);
         if (!response.ok) {
             return false;
         }
@@ -477,7 +481,7 @@ async checkAudioDirectoryContents() {
             if (this.audioQueue.length === 0) {
                 try {
                     console.log(`Loading audio files for: ${this.conversationId}`);
-                    const response = await fetch(`api/get-conversation-audio.php?conversation_id=${this.conversationId}`);
+                    const response = await fetch(`api/get-conversation-audio?conversation_id=${this.conversationId}`);
                     
                     if (!response.ok) {
                         throw new Error(`Failed to load audio files: ${response.status}`);
@@ -595,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// Add this to the end of your conversation-share.js file or in a script tag in index.php
+// Add this to the end of your conversation-share.js file or in a script tag in index
 
 // Fix for missing share button
 document.addEventListener('DOMContentLoaded', function() {

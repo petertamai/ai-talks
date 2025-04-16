@@ -11,8 +11,8 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 // Session handling for cookies
-session_start();
-
+ session_start();
+require_once __DIR__ . '/security.php';
 // Get API keys from cookies if available
 function getOpenRouterKey() {
     if (isset($_COOKIE['openrouter_api_key']) && !empty($_COOKIE['openrouter_api_key'])) {

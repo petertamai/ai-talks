@@ -748,7 +748,7 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
     <script src="assets/js/app.js"></script>
     <script src="assets/js/listeners.js"></script>
     <script src="assets/js/conversation-share.js"></script>
-  
+    <script src="assets/js/security.js"></script>
 <script>
 // Handle shared conversation view
 const isSharedView = <?php echo $isSharedView ? 'true' : 'false'; ?>;

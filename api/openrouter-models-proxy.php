@@ -10,7 +10,12 @@
 
 // Include configuration
 require_once '../includes/config.php';
-
+// Verify nonce
+if (!isset($_SERVER['HTTP_X_AJAX_NONCE']) || !verify_nonce($_SERVER['HTTP_X_AJAX_NONCE'], 'ajax_request')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Invalid security token']);
+    exit;
+}
 // Set content type to JSON
 header('Content-Type: application/json');
 

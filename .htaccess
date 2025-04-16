@@ -1,0 +1,86 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# Set the base directory relative to the domain's document root
+# IMPORTANT: Assumes this .htaccess file is in the DOCUMENT ROOT,
+# and your application lives in the 'aitalks' subdirectory.
+# If this .htaccess file is INSIDE the 'aitalks' directory, change this to RewriteBase /
+RewriteBase /aitalks/
+
+# Remove trailing slashes from URLs that aren't directories
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)/$ $1 [L,R=301]
+
+# --- API Endpoint Routing ---
+# Check if the request doesn't directly match a file or directory
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# Check if adding .php to the request *does* match an existing file
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.php -f
+# If all conditions met, internally rewrite the request to the .php file
+# Example: /aitalks/api/some-endpoint -> /aitalks/api/some-endpoint.php
+RewriteRule ^(.+)$ $1.php [L,QSA]
+# --- End API Endpoint Routing ---
+
+# Pretty URLs for shared conversations
+# Example: /aitalks/share/some_id -> /aitalks/index.php?id=some_id
+RewriteRule ^share/([a-zA-Z0-9_]+)/?$ index.php?id=$1 [NC,L,QSA]
+RewriteRule ^api/openrouter-models-proxy$ api/openrouter-models-proxy.php [L,QSA]
+# Block access to sensitive files and directories using FilesMatch
+# Targets specific filenames like .ht, config.php, security.php, .log
+<FilesMatch "^\.ht|config\.php$|\.log$|security\.php$">
+    Require all denied
+    # For Apache < 2.4 use:
+    # Order allow,deny
+    # Deny from all
+</FilesMatch>
+
+# Prevent access to sensitive directories using RedirectMatch (sends 403 Forbidden)
+# Use RewriteRule for more flexibility if needed, RedirectMatch is simpler here.
+RedirectMatch 403 ^/aitalks/data/?$
+RedirectMatch 403 ^/aitalks/conversations/?$
+RedirectMatch 403 ^/aitalks/logs/?$
+RedirectMatch 403 ^/aitalks/includes/?$
+# Note: Ensure these paths are correct relative to the domain root.
+
+# Prevent directory browsing/listing
+Options -Indexes
+
+# Stop hotlinking of images (optional, keep if needed)
+<IfModule mod_rewrite.c>
+    RewriteCond %{HTTP_REFERER} !^$
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?petertam\.pro [NC]
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?scripts\.petertam\.pro [NC]
+    RewriteCond %{HTTP_REFERER} !^https?://localhost [NC]
+    RewriteCond %{REQUEST_URI} \.(jpg|jpeg|png|gif)$ [NC]
+    RewriteRule \.(jpg|jpeg|png|gif)$ - [F,NC,L]
+</IfModule>
+
+# MIME types (Generally good practice)
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+    AddType text/html .html .htm
+    AddType audio/mpeg .mp3
+    AddType image/svg+xml .svg .svgz
+    AddType application/font-woff .woff
+    AddType application/font-woff2 .woff2
+    AddType application/vnd.ms-fontobject .eot
+    AddType application/x-font-ttf .ttf
+    AddType image/x-icon .ico
+</IfModule>
+
+# Set security headers (Good practice)
+<IfModule mod_headers.c>
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    # Uncomment and configure HSTS if your entire site enforces HTTPS
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+</IfModule>
+
+# Custom error pages (optional, uncomment and create files if desired)
+# ErrorDocument 404 /aitalks/404.php
+# ErrorDocument 403 /aitalks/403.php
+# ErrorDocument 500 /aitalks/500.php

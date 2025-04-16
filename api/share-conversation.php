@@ -10,7 +10,12 @@
 
 // Include required configuration
 require_once '../includes/config.php';
-
+// Verify nonce
+if (!isset($_SERVER['HTTP_X_AJAX_NONCE']) || !verify_nonce($_SERVER['HTTP_X_AJAX_NONCE'], 'ajax_request')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Invalid security token']);
+    exit;
+}
 // Set headers
 header('Content-Type: application/json');
 
@@ -123,7 +128,7 @@ try {
     $baseDir = dirname(dirname($_SERVER['SCRIPT_NAME']));
     $baseDir = $baseDir !== '/' ? $baseDir : '';
     
-    $shareUrl = "$protocol://$host$baseDir/index.php?id=$conversationId";
+    $shareUrl = "$protocol://$host$baseDir/share/$conversationId";
     
     // Return success
     echo json_encode([

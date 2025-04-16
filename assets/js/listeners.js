@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             async function loadAudioFiles() {
                 try {
-                    const response = await fetch(`api/get-conversation-audio.php?conversation_id=${conversationId}`);
+                    const response = await fetch(`api/get-conversation-audio?conversation_id=${conversationId}`);
                     if (!response.ok) {
                         return false;
                     }
@@ -390,8 +390,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Check for audio files via API
             const endpoint = forceCheck ? 
-                `api/check-audio-recordings.php?conversation_id=${conversationId}&force_scan=true` :
-                `api/check-audio-recordings.php?conversation_id=${conversationId}`;
+                `api/check-audio-recordings?conversation_id=${conversationId}&force_scan=true` :
+                `api/check-audio-recordings?conversation_id=${conversationId}`;
                 
             const response = await fetch(endpoint);
             if (!response.ok) return false;
@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Start playback
         try {
             // Load audio files list
-            const response = await fetch(`api/get-conversation-audio.php?conversation_id=${conversationId}`);
+            const response = await fetch(`api/get-conversation-audio?conversation_id=${conversationId}`);
             if (!response.ok) {
                 throw new Error(`Failed to load audio files: ${response.status}`);
             }
@@ -708,7 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const conversationId = localStorage.getItem('currentConversationId');
             if (!conversationId) return false;
             
-            const response = await fetch(`api/check-audio-recordings.php?conversation_id=${conversationId}&force_scan=true`);
+            const response = await fetch(`api/check-audio-recordings?conversation_id=${conversationId}&force_scan=true`);
             if (!response.ok) return false;
             
             const data = await response.json();
@@ -802,7 +802,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Start playback
             try {
                 // Load audio files
-                const response = await fetch(`api/get-conversation-audio.php?conversation_id=${conversationId}`);
+                const response = await fetch(`api/get-conversation-audio?conversation_id=${conversationId}`);
                 if (!response.ok) {
                     throw new Error(`Failed to load audio files: ${response.status}`);
                 }

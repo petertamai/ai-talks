@@ -59,7 +59,7 @@ async function saveApiKey(keyName, keyValue) {
             }
         });
         
-        const response = await fetch('api/save-keys.php', {
+        const response = await fetch('api/save-keys', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -113,7 +113,7 @@ async function fetchAvailableModels() {
             throw new Error('OpenRouter API key not found');
         }
         
-        const response = await fetch('api/openrouter-models-proxy.php');
+        const response = await fetch('api/openrouter-models-proxy');
         
         if (!response.ok) {
             // Check if it's a 400 error which might be an API key issue
@@ -261,7 +261,7 @@ async function getAIResponse(aiId, prompt, modelId = null, temperature = 0.5, ma
         debugLog(`Sending ${messages.length} messages to ${model}`);
         
         // Send request to OpenRouter via our PHP proxy
-        const response = await fetch('api/openrouter-proxy.php', {
+        const response = await fetch('api/openrouter-proxy', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -363,7 +363,7 @@ async function speakText(aiId, text) {
         debugLog(`TTS for conversation: ${conversationId}, message: ${messageIndex}, agent: ${aiId}`);
         
         // Send request to our PHP proxy
-        const response = await fetch('api/groq-tts-proxy.php', {
+        const response = await fetch('api/groq-tts-proxy', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

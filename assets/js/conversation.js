@@ -41,7 +41,7 @@ async function playTextToSpeech(agent, text) {
         
         debug.log(`Playing TTS for ${agent} using voice ${agentConfig.tts.voice}`);
         
-        const response = await fetch('api/tts.php', {
+        const response = await fetch('api/tts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
