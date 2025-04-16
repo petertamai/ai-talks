@@ -79,6 +79,8 @@ async function playTextToSpeech(agent, text) {
 }
 
 // Add message to chat
+
+
 function addMessageToChat(sender, text, modelId = null) {
     const chatContainer = $('#chat-container');
     let messageClass, agentName, modelName = '';
@@ -90,7 +92,7 @@ function addMessageToChat(sender, text, modelId = null) {
         if (!modelId) {
             modelId = $('#ai1-model').val();
         }
-        // Hide typing indicator if it was showing (might be redundant here, but safe)
+        // Hide typing indicator if it was showing
         hideTypingIndicator('ai1');
     } else if (sender === 'ai2') {
         messageClass = 'ai2';
@@ -99,10 +101,10 @@ function addMessageToChat(sender, text, modelId = null) {
         if (!modelId) {
             modelId = $('#ai2-model').val();
         }
-         // Hide typing indicator if it was showing (might be redundant here, but safe)
+        // Hide typing indicator if it was showing
         hideTypingIndicator('ai2');
-    } else if (sender === 'system') { // Added system sender type
-        messageClass = 'system text-center w-full bg-gray-600 text-white'; // Use existing style
+    } else if (sender === 'system') { // System message handling
+        messageClass = 'system text-center w-full bg-gray-600 text-white';
         agentName = 'System';
     } else {
         messageClass = 'human';
@@ -116,28 +118,34 @@ function addMessageToChat(sender, text, modelId = null) {
     
     // Add message to container with clear identification and model badge
     const modelBadge = modelName ? `<div class="model-badge">${modelName}</div>` : '';
-    const agentNameDiv = sender !== 'system' ? `<div class="agent-name">${agentName}</div>` : ''; // Don't show agent name for system messages
-
-    chatContainer.append(`
+    const agentNameDiv = `<div class="agent-name">${agentName}</div>`; 
+    
+    // Create message element
+    const messageElement = $(`
         <div class="chat-message ${messageClass}">
             ${agentNameDiv}
-            ${text}
+            <div class="message-text">${text}</div>
             ${modelBadge}
         </div>
     `);
     
+    // Add to the chat container
+    chatContainer.append(messageElement);
+    
     // Force scroll to bottom
     scrollToBottom();
     
-    // Add to conversation history (optional: decide if system messages go here)
-    if (sender !== 'system') {
-        conversationHistory.push({
-            sender: sender,
-            text: text,
-            modelId: modelId,
-            timestamp: new Date().toISOString()
-        });
-    }
+    // Add to conversation history - IMPORTANT: Set the correct role for system messages
+    const messageRole = sender === 'system' ? 'system' : 
+                       (sender === 'human' ? 'human' : 'assistant');
+    
+    conversationHistory.push({
+        sender: sender,
+        role: messageRole, // Use the correct message role based on sender
+        text: text,
+        modelId: modelId,
+        timestamp: new Date().toISOString()
+    });
 }
 
 // Show typing indicator for an AI
@@ -453,7 +461,7 @@ async function startConversation() {
     }
 }
 
-// Stop conversation
+
 function stopConversation(reasonMessage = null) { // Added optional reason message
     if (!conversationActive && !reasonMessage) { // Avoid logging if already stopped unless a reason is given
         debugLog('Stop called but conversation not active.');
@@ -496,13 +504,24 @@ function stopConversation(reasonMessage = null) { // Added optional reason messa
     
     // Add end message to chat *if* the conversation was active or a specific reason is given
     if (wasActive || reasonMessage) {
-        const endMessageText = reasonMessage || 'Conversation stopped'; // Use reason or default
+        const endMessageText = typeof reasonMessage === 'string' ? reasonMessage : 'Conversation stopped'; // Ensure reasonMessage is string
         // Use addMessageToChat for consistency
         addMessageToChat('system', endMessageText); 
     }
     
     // Scroll to bottom to show the stop message
     scrollToBottom();
+    
+    // Show share button if conversation had any messages
+    const hasMessages = $('#chat-container').children().length > 0;
+    if (hasMessages && window.conversationShare) {
+        window.conversationShare.showShareButton(true);
+        window.conversationShare.updatePlayButtonVisibility().then(hasAudio => {
+            if (hasAudio) {
+                window.conversationShare.showPlayButton(true);
+            }
+        });
+    }
     
     debugLog('Conversation fully stopped');
 }

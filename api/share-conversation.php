@@ -3,6 +3,7 @@
  * API Endpoint for Sharing Conversations
  * 
  * Handles the process of saving conversation data and marking it as shared.
+ * Updated to use index.php instead of share.php for sharing
  * 
  * @author Piotr Tamulewicz <pt@petertam.pro>
  */
@@ -116,13 +117,13 @@ try {
     // Save the updated shared conversations tracker
     file_put_contents($sharedConversationsFile, json_encode($sharedConversations, JSON_PRETTY_PRINT));
     
-    // Generate share URL
+    // Generate share URL - now pointing to index.php instead of share.php
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'];
     $baseDir = dirname(dirname($_SERVER['SCRIPT_NAME']));
     $baseDir = $baseDir !== '/' ? $baseDir : '';
     
-    $shareUrl = "$protocol://$host$baseDir/share.php?id=$conversationId";
+    $shareUrl = "$protocol://$host$baseDir/index.php?id=$conversationId";
     
     // Return success
     echo json_encode([
